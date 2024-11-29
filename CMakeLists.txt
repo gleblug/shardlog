@@ -5,9 +5,13 @@ project(shardlog)
 find_package(xtd REQUIRED)
 add_packages(spdlog)
 add_references(spdlog::spdlog)
-add_packages(PkgConfig)
-pkg_check_modules(libusb REQUIRED IMPORTED_TARGET libusb-1.0)
-add_references(PkgConfig::libusb)
+
+add_library(nivisa STATIC IMPORTED)
+set_target_properties(nivisa PROPERTIES
+    IMPORTED_LOCATION "C:/Program Files/IVI Foundation/VISA/Win64/Lib_x64/msc/nivisa64.lib"
+    INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files/IVI Foundation/VISA/Win64/Include"
+)
+add_references(nivisa)
 
 set(target_sources
     main.cpp
