@@ -1,0 +1,2 @@
+# shardlog
+Simple hardware logger
