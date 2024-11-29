@@ -3,8 +3,10 @@
 
 using namespace xtd;
 
-auto main() -> int {
+auto main() -> int	{
 	console::foreground_color(console_color::white);
-	console::write_line("Hello, World!");
+
+	spdlog::error("cannot connect to visa");
+
 	spdlog::info("INFO");
 }
