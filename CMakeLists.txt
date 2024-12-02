@@ -4,7 +4,7 @@ project(shardlog)
 
 find_package(xtd REQUIRED)
 add_packages(spdlog)
-add_references(spdlog::spdlog)
+add_references(spdlog::spdlog_header_only)
 
 add_library(nivisa STATIC IMPORTED)
 set_target_properties(nivisa PROPERTIES
@@ -12,6 +12,7 @@ set_target_properties(nivisa PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files/IVI Foundation/VISA/Win64/Include"
 )
 add_references(nivisa)
+
 
 set(target_sources
     main.cpp
