@@ -1,22 +1,24 @@
 #pragma once
 
+#include <string>
+
 class VisaDefaultCommands {
-protected:
-	std::string stype;
+	std::string query;
 public:
 	std::string configure;
 	std::string read;
-	VisaDefaultCommands(const MeterType mtype) {
-		stype = xtd::ustring::join(":", xtd::ustring(mtype._to_string()).split({ '_' }));
-		configure = ""
-			":CONF:" + stype + ";";
-		read = "READ?";
+	VisaDefaultCommands(const std::string& stype) : query(stype){
+		configure = ":CONF:" + query + ";";
+		read = ":READ?";
+	}
+	std::string stype() const {
+		return query;
 	}
 };
 
 class KeysightCommands : public VisaDefaultCommands {
 public:
-	KeysightCommands(const MeterType mtype) : VisaDefaultCommands(mtype) {
+	KeysightCommands(const std::string& stype) : VisaDefaultCommands(stype) {
 		configure = ""
 			":CONF:" + stype + ";"
 			":SAMP:COUN 1;";
@@ -26,7 +28,7 @@ public:
 
 class RigolCommands : public VisaDefaultCommands {
 public:
-	RigolCommands(const MeterType mtype) : VisaDefaultCommands(mtype) {
+	RigolCommands(const std::string& stype) : VisaDefaultCommands(stype) {
 		read = "MEAS:" + stype + "?";
 	}
 };

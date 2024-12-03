@@ -1,4 +1,6 @@
 #pragma once
+#include <better-enums/enum.h>
+
 #include <string>
 #include <unordered_map>
 

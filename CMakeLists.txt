@@ -17,6 +17,11 @@ add_references(nivisa)
 
 set(target_sources
     main.cpp
+    measurer.cpp
+    config_parser.cpp
+    hardware/utils.cpp
+    hardware/visa_instrument.cpp
+    hardware/visa/resources.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
 

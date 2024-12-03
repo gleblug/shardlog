@@ -9,6 +9,7 @@
 #include "config_parser.hpp"
 #include "measurer.hpp"
 #include "hardware/utils.hpp"
+#include "hardware/visa/resources.hpp"
 
 
 using namespace xtd;
@@ -16,8 +17,6 @@ namespace lg = spdlog;
 namespace ini = mINI;
 
 auto main() -> int	{
-	xtd::console::title("shardlog application");
-
 	const auto configPath = "config.ini";
 	ConfigParser config(configPath);
 	
