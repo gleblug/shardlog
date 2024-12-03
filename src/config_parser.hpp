@@ -8,19 +8,14 @@
 
 #include <exception>
 
-#include "meter.hpp"
+#include "hardware/meter.hpp"
+#include "hardware/config.hpp"
 
 namespace io = xtd::io;
 namespace ini = mINI;
 namespace lg = spdlog;
 
-class Config : private ini::INIStructure {
-	using HardwareName = std::string;
-
-	struct HardwareConfig {
-		std::string port;
-		MeterType type = MeterType::UNKNOWN;
-	};
+class ConfigParser : private ini::INIStructure {
 
 	struct MeasurerConfig {
 		double timeout;
@@ -34,7 +29,9 @@ class Config : private ini::INIStructure {
 	const std::string hardwareSection = "hardware";
 
 public:
-	explicit Config(const std::string& filename) noexcept : fname{ filename } {
+	
+	explicit ConfigParser(const std::string& filename) noexcept : fname{ filename } {
+		lg::info("load config from '{}'", filename);
 		if (!io::file::exists(fname)) {
 			lg::warn("Can't find {}. Creating a new one...", fname);
 			createFile();
@@ -71,7 +68,7 @@ public:
 
 	auto hardware() {
 		auto measConfig = measurer();
-		std::unordered_map<HardwareName, HardwareConfig> hardConfig{};
+		Hard::ConfigMap configMap{};
 		for (const auto& meterName : measConfig.usedMeters) {
 			auto sname = xtd::ustring::format("{}.{}", hardwareSection, meterName);
 			if (!this->has(sname))
@@ -80,9 +77,9 @@ public:
 
 			auto port = section.get("port");
 			auto type = MeterType::_from_string(section.get("type").c_str());
-			hardConfig[meterName] = HardwareConfig{ port, type };
+			configMap[meterName] = Hard::Config{ port, type };
 		}
-		return hardConfig;
+		return configMap;
 	}
 
 private:

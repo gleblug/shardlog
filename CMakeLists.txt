@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(shardlog)
 
 find_package(xtd REQUIRED)
+add_references(xtd.core)
 add_packages(spdlog)
 add_references(spdlog::spdlog_header_only)
 

@@ -37,20 +37,31 @@ public:
 };
 
 class ResourceManager {
-	ViSession rm;
-	bool opened;
+	inline static ViSession rm;
+	inline static bool opened;
 public:
-	ResourceManager() : opened(false) {
-		if (viOpenDefaultRM(&this->rm) != VI_SUCCESS) {
+	ResourceManager() {
+		if (opened)
+			return;
+
+		if (viOpenDefaultRM(&rm) != VI_SUCCESS) {
 			lg::error("Can't open VISA resource manager!");
+			opened = false;
 			return;
 		}
+
+		lg::info("the visa resource manager is now open");
 		opened = true;
 	}
 
-	~ResourceManager() {
-		if (viClose(this->rm) != VI_SUCCESS)
+	~ResourceManager() {}
+
+	static void close() {
+		if (!opened)
+			return;
+		if (viClose(rm) != VI_SUCCESS)
 			lg::error("Error while closing resource manager!");
+		opened = false;
 	}
 
 	std::vector<std::string> resourcesList() {
