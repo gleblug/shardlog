@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
+set(CMAKE_CXX_STANDARD 20)
 
 project(shardlog)
 
@@ -6,6 +7,8 @@ find_package(xtd REQUIRED)
 add_references(xtd.core)
 add_packages(spdlog)
 add_references(spdlog::spdlog_header_only)
+add_packages(yaml-cpp)
+add_references(yaml-cpp::yaml-cpp)
 
 add_library(nivisa STATIC IMPORTED)
 set_target_properties(nivisa PROPERTIES
@@ -17,11 +20,11 @@ add_references(nivisa)
 
 set(target_sources
     main.cpp
-    measurer.cpp
-    config_parser.cpp
-    hardware/utils.cpp
-    hardware/visa_instrument.cpp
-    hardware/visa/resources.cpp
+    measurer/measurer.cpp
+    config/config_parser.cpp
+    #hardware/utils.cpp
+    #hardware/visa_instrument.cpp
+    #hardware/visa/resources.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
 

@@ -1,31 +1,78 @@
-#include <xtd/xtd>
+#include <memory>
+
+#include <xtd/console.h>
+#include <xtd/using.h>
 #include <spdlog/spdlog.h>
 #include <mini/ini.h>
+#include <better-enums/enum.h>
 
-#include <exception>
-#include <vector>
-#include <string>
+#include "config/config_parser.hpp"
+#include "measurer/measurer.hpp"
+#include "meter/meter.hpp"
+#include "meter/connection/connection.hpp"
 
-#include "config_parser.hpp"
-#include "measurer.hpp"
-#include "hardware/utils.hpp"
-#include "hardware/visa/resources.hpp"
-
-
-using namespace xtd;
 namespace lg = spdlog;
-namespace ini = mINI;
+using xtd::console;
+using xtd::ustring;
 
-auto main() -> int	{
-	const auto configPath = "config.ini";
-	ConfigParser config(configPath);
-	
-	auto meters = Hard::openMeters(config.hardware());
+BETTER_ENUM(Option, uint8_t,
+	DEVICES_LIST = 1,
+	MEASURE
+)
 
-	auto measConfig = config.measurer();
-	Measurer measurer(std::move(meters), measConfig.directory, measConfig.timeout);
-	measurer.run();
+class Application {
+public:
+	void devicesList() {
+		Visa::ResourceManager rm{};
+		for (const auto& desc : rm.resourcesList()) {
+			auto conn = Connection::open<Nivisa>(desc);
+			console::write_line("{}\t{}", desc, conn->query("*IDN?"));
+		}
+	}
 
-	ResourceManager::close();
-	lg::info("The program ended correctly.");
+	void measure() {
+		const auto configPath = "config.ini";
+		ConfigParser config(configPath);
+
+		Meter::List meters;
+		for (const auto& mconf : config.meters())
+			meters.push_back(Meter::create(mconf));
+
+		auto measConfig = config.measurer();
+		Measurer measurer(std::move(meters), measConfig.directory, measConfig.timeout);
+		measurer.start();
+
+		lg::info("The measures ended correctly.");
+	}
+
+	void run() {
+		console::clear();
+		console::write_line("Please, choose option:");
+		for (const auto& value : Option::_values())
+			console::write_line("{} -- {}", value._to_index(), value._to_string());
+		auto optionIndex = ustring::parse<size_t>(console::read_line());
+		auto option = Option::_from_index(optionIndex);
+
+		switch (option) {
+		case Option::DEVICES_LIST:
+			devicesList();
+			break;
+		case Option::MEASURE:
+			measure();
+			break;
+		default:
+			console::write_line("Unknown option!");
+			break;
+		}
+
+		console::write_line("Press any button to exit...");
+		console::read_key();
+	}
+};
+
+
+auto main() -> int {
+	lg::set_level(lg::level::debug);
+	Application app{};
+	app.run();
 }

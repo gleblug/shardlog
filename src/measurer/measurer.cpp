@@ -1,20 +1,23 @@
 #include "measurer.hpp"
 
-#include <xtd/console.h>
-
 #include <thread>
 #include <format>
 #include <numeric>
 #include <unordered_map>
 #include <fstream>
 
+#include <xtd/console.h>
+#include <xtd/ustring.h>
+
+#include "../meter/meter.hpp"
+
 std::ostream& operator<<(std::ostream& os, const Measurement& meas) {
 	return os << std::accumulate(
 		meas.values.cbegin(),
 		meas.values.cend(),
 		std::to_string(meas.time.count()),
-		[](const std::string& prev, double val) {
-			return std::format("{}\t{}", prev, val);
+		[](const std::string& prev, const std::string& val) {
+			return std::format("{}\t{}", prev, xtd::ustring(val).trim().c_str());
 		}
 	);
 }
@@ -31,7 +34,7 @@ Measurer::Measurer(Meter::List&& meters_, const std::string& directory_, const d
 	lg::info("measurer will save date into file '{}' with timeout t = {}s", fname.string(), timeout);
 }
 
-void Measurer::run() {
+void Measurer::start() {
 	if (meters.empty()) {
 		lg::warn("There is no meters to measure!");
 		return;
@@ -64,7 +67,7 @@ void Measurer::createFile() {
 		meters.cend(),
 		std::string("time,s"),
 		[](const std::string& prev, const std::unique_ptr<Meter>& meter) {
-			return std::format("{}\t{},{}", prev, meter->name(), meter->type()._to_string());
+			return std::format("{}\t{}", prev, meter->name());
 		}
 	);
 	file << header << std::endl;
@@ -81,13 +84,13 @@ void Measurer::preRun() {
 
 Measurement Measurer::processMeters() {
 	std::vector<std::thread> threads;
-	std::unordered_map<Hard::Name, double> values;
+	std::unordered_map<std::string, std::string> values;
 	std::mutex mu;
 
 	auto curTime = chrono::steady_clock::now();
 	for (const auto& meter : meters) {
 		threads.emplace_back([&meter, &values, &mu]() {
-			auto val = meter->value();
+			auto val = meter->instantValue();
 			std::lock_guard<std::mutex> lg{ mu };
 			values[meter->name()] = val;
 			});
@@ -95,7 +98,7 @@ Measurement Measurer::processMeters() {
 	for (auto& th : threads)
 		th.join();
 
-	std::vector<double> res;
+	std::vector<std::string> res;
 	for (const auto& meter : meters)
 		res.push_back(values[meter->name()]);
 
