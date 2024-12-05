@@ -15,7 +15,7 @@ std::ostream& operator<<(std::ostream& os, const Measurement& meas) {
 	return os << std::accumulate(
 		meas.values.cbegin(),
 		meas.values.cend(),
-		std::to_string(meas.time.count()),
+		std::format("{:.3f}", meas.time.count()),
 		[](const std::string& prev, const std::string& val) {
 			return std::format("{}\t{}", prev, xtd::ustring(val).trim().c_str());
 		}

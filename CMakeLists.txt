@@ -10,6 +10,13 @@ add_references(spdlog::spdlog_header_only)
 add_packages(yaml-cpp)
 add_references(yaml-cpp::yaml-cpp)
 
+add_library(CSerialPort STATIC IMPORTED)
+set_target_properties(CSerialPort PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/vcpkg_installed/$ENV{VCPKG_DEFAULT_TRIPLET}/lib/libcserialport.lib"
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/vcpkg_installed/$ENV{VCPKG_DEFAULT_TRIPLET}/include/CSerialPort"
+)
+add_references(CSerialPort)
+
 add_library(nivisa STATIC IMPORTED)
 set_target_properties(nivisa PROPERTIES
     IMPORTED_LOCATION "C:/Program Files/IVI Foundation/VISA/Win64/Lib_x64/msc/nivisa64.lib"

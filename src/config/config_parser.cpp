@@ -71,7 +71,7 @@ std::vector<Meter::Config> ConfigParser::meters() {
 	for (const auto& meterName : measConfig.usedMeters) {
 		auto sname = std::format("{}.{}", meterSection, meterName);
 		if (!has(sname))
-			throw std::runtime_error("Invalid meter name in measurer config!");
+			throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
 		auto section = get(sname);
 
 		res.emplace_back(

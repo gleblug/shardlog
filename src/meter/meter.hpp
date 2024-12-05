@@ -37,6 +37,10 @@ public:
 		, m_cmd{ cmd }
 		, m_conn{ std::move(conn) }
 	{
+		for (const auto& cmd : m_cmd.read)
+			lg::debug("Read command: {}", cmd);
+		for (const auto& cmd : m_cmd.configure)
+			lg::debug("Config command: {}", cmd);
 		for (const auto& confCmd : m_cmd.configure)
 			m_conn->write(confCmd);
 	}

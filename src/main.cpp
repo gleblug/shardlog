@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 #include <mini/ini.h>
 #include <better-enums/enum.h>
+#include <CSerialPort/SerialPortInfo.h>
 
 #include "config/config_parser.hpp"
 #include "measurer/measurer.hpp"
@@ -24,9 +25,15 @@ class Application {
 public:
 	void devicesList() {
 		Visa::ResourceManager rm{};
+		console::write_line("VISA devices:");
 		for (const auto& desc : rm.resourcesList()) {
 			auto conn = Connection::open<Nivisa>(desc);
 			console::write_line("{}\t{}", desc, conn->query("*IDN?"));
+		}
+		console::write_line("COM devices:");
+		for (const auto& comport : CSerialPortInfo::availablePortInfos()) {
+			auto conn = Connection::open<Comport>(comport.portName);
+			console::write_line("{}\t{}\t{}\t{}", comport.portName, comport.description, conn->query("*IDN?"));
 		}
 	}
 
@@ -42,7 +49,7 @@ public:
 		Measurer measurer(std::move(meters), measConfig.directory, measConfig.timeout);
 		measurer.start();
 
-		lg::info("The measures ended correctly.");
+		lg::info("The measures ends correctly.");
 	}
 
 	void run() {

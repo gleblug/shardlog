@@ -2,13 +2,19 @@
 
 #include <string>
 #include <memory>
+#include <atomic>
+#include <thread>
+#include <cstring>
 
 #include <spdlog/spdlog.h>
 #include <better-enums/enum.h>
 #include <visa.h>
 #include <visatype.h>
+#include <CSerialPort/SerialPort.h>
+#include <CSerialPort/SerialPortInfo.h>
 
 namespace lg = spdlog;
+using namespace itas109;
 
 BETTER_ENUM(ConnectionType, uint8_t,
 	NIVISA,
@@ -23,7 +29,7 @@ public:
 	virtual ~Connection() = default;
 	virtual void write(const std::string& msg) = 0;
 	virtual std::string read() = 0;
-	std::string query(const std::string& msg) {
+	virtual std::string query(const std::string& msg) {
 		write(msg);
 		return read();
 	}
@@ -35,16 +41,82 @@ public:
 };
 
 namespace COM {
-
+	class Listener : public CSerialPortListener {
+		std::weak_ptr<CSerialPort> m_sp;
+		std::string m_buffer;
+		std::string m_answer;
+		std::atomic_bool m_recite;
+		std::mutex m_mu;
+	public:
+		Listener(std::shared_ptr<CSerialPort> sp)
+			: m_sp(sp)
+			, m_buffer{}
+			, m_answer{}
+			, m_recite{ false }
+			, m_mu{}
+		{}
+		void onReadEvent(const char* portName, unsigned int readBufferLen) override {
+			char* data = new char[readBufferLen];
+			if (readBufferLen > 0 && data) {
+				int recLen = m_sp.lock()->readData(data, readBufferLen);
+				if (recLen > 0) {
+					m_buffer += std::string(data, readBufferLen);
+					auto eolIdx = m_buffer.find("\n");
+					if (eolIdx != std::string::npos) {
+						saveAnswer(eolIdx);
+						m_buffer = m_buffer.substr(eolIdx + 1);
+					}
+				}
+			}
+			delete[] data;
+		}
+		void saveAnswer(const size_t eolIdx) {
+			std::lock_guard<std::mutex> lg(m_mu);
+			m_answer = m_buffer.substr(0, eolIdx);
+			m_recite.store(true);
+			m_recite.notify_all();
+		}
+		std::string lastAnswer() {
+			m_recite.wait(false);
+			std::lock_guard<std::mutex> lg(m_mu);
+			auto res = m_answer;
+			m_recite.store(false);
+			return res;
+		}
+	};
 };
 
 class Comport : public Connection {
-public:
-	explicit Comport(const std::string& port) : Connection(port) {
+	std::shared_ptr<CSerialPort> m_sp;
+	COM::Listener listener;
+	std::chrono::milliseconds timeout;
 
+public:
+	explicit Comport(const std::string& port)
+		: Connection(port)
+		, m_sp{ new CSerialPort }
+		, listener{ m_sp }
+		, timeout{ std::chrono::milliseconds(5000) }
+	{
+		m_sp->init(m_port.c_str());
+		m_sp->setReadIntervalTimeout(1);
+		m_sp->setMinByteReadNotify(10);
+		if (!m_sp->open())
+			lg::error("Failed to open '{}'!");
+		m_sp->connectReadEvent(&listener);
 	}
-	virtual void write(const std::string& msg) {}
-	virtual std::string read() { return ""; }
+	~Comport() {
+		m_sp->disconnectReadEvent();
+		m_sp->flushBuffers();
+		m_sp->close();
+	}
+	void write(const std::string& msg) final {
+		auto msgCopy = msg + "\n\r";
+		m_sp->writeData(msgCopy.c_str(), msgCopy.size());
+	}
+	std::string read() final {
+		return listener.lastAnswer();
+	}
 };
 
 namespace Visa {
@@ -56,7 +128,7 @@ namespace Visa {
 				lg::error("Can't open VISA resource manager!");
 				return;
 			}
-			lg::info("A new session of VISA resource manager was opened.");
+			lg::debug("A new session of VISA resource manager was opened.");
 		}
 
 		~ResourceManager() {

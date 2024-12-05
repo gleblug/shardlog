@@ -4,6 +4,7 @@
     "better-enums",
     "pulzed-mini",
     "spdlog",
-    "yaml-cpp"
+    "yaml-cpp",
+    "cserialport"
   ]
 }
