@@ -13,8 +13,10 @@
   
 - name: keithley6485
   configure:
-    - RANG 1E-6
+    - "*RST"
     - NPLC 1
-  read:
+    - RANG 1E-6
     - INIT
+    - READ?
+  read:
     - READ?

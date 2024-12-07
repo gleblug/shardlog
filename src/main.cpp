@@ -79,7 +79,7 @@ public:
 
 
 auto main() -> int {
-	lg::set_level(lg::level::debug);
+	lg::set_level(lg::level::info);
 	Application app{};
 	app.run();
 }

@@ -45,15 +45,15 @@ namespace COM {
 		std::weak_ptr<CSerialPort> m_sp;
 		std::string m_buffer;
 		std::string m_answer;
-		std::atomic_bool m_recite;
 		std::mutex m_mu;
+		std::condition_variable m_cv;
 	public:
 		Listener(std::shared_ptr<CSerialPort> sp)
 			: m_sp(sp)
 			, m_buffer{}
 			, m_answer{}
-			, m_recite{ false }
 			, m_mu{}
+			, m_cv{}
 		{}
 		void onReadEvent(const char* portName, unsigned int readBufferLen) override {
 			char* data = new char[readBufferLen];
@@ -73,14 +73,22 @@ namespace COM {
 		void saveAnswer(const size_t eolIdx) {
 			std::lock_guard<std::mutex> lg(m_mu);
 			m_answer = m_buffer.substr(0, eolIdx);
-			m_recite.store(true);
-			m_recite.notify_all();
+			m_cv.notify_all();
 		}
 		std::string lastAnswer() {
-			m_recite.wait(false);
-			std::lock_guard<std::mutex> lg(m_mu);
-			auto res = m_answer;
-			m_recite.store(false);
+			std::string res = "";
+			std::unique_lock<std::mutex> lk(m_mu);
+
+			std::swap(res, m_answer);
+			if (!res.empty())
+				return res;
+
+			if (m_cv.wait_for(lk, std::chrono::seconds(1)) == std::cv_status::timeout) {
+				lg::warn("COM port timeout");
+				return "";
+			}
+
+			std::swap(res, m_answer);
 			return res;
 		}
 	};
