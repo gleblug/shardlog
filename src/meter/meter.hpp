@@ -31,17 +31,18 @@ private:
 	std::string m_name;
 	Commands m_cmd;
 	std::unique_ptr<Connection> m_conn;
-	std::string m_value;
 	std::atomic_flag m_recite;
-
-public:
 	std::mutex m_mu;
 	std::condition_variable m_cv;
+	std::string m_value;
+
+public:
 
 	Meter(const std::string& name, const Commands& cmd, std::unique_ptr<Connection>&& conn)
 		: m_name{ name }
 		, m_cmd{ cmd }
 		, m_conn{ std::move(conn) }
+		, m_recite{}
 		, m_mu{}
 		, m_cv{}
 		, m_value{}
@@ -97,21 +98,10 @@ public:
 	}
 
 	static std::unique_ptr<Meter> create(const Config& conf) {
-		std::unique_ptr<Connection> conn;
-		switch (conf.connectionType) {
-		case ConnectionType::NIVISA:
-			conn = Connection::open<Nivisa>(conf.port);
-			break;
-		case ConnectionType::COM:
-			conn = Connection::open<Comport>(conf.port);
-			break;
-		default:
-			throw std::runtime_error("Unknown connection type!");
-		}
 		return std::make_unique<Meter>(
 			conf.name,
 			conf.commands,
-			std::move(conn)
+			Connection::fromType(conf.connectionType, conf.port)
 		);
 	}
 };

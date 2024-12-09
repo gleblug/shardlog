@@ -21,6 +21,9 @@ BETTER_ENUM(ConnectionType, uint8_t,
 	COM
 );
 
+class Comport;
+class Nivisa;
+
 class Connection {
 protected:
 	std::string m_port;
@@ -37,6 +40,17 @@ public:
 	template <typename Derived>
 	static std::unique_ptr<Connection> open(const std::string& port) {
 		return std::make_unique<Derived>(port);
+	}
+
+	static std::unique_ptr<Connection> fromType(const ConnectionType type, const std::string& port) {
+		switch (type) {
+		case ConnectionType::NIVISA:
+			return open<Nivisa>(port);
+		case ConnectionType::COM:
+			return open<Comport>(port);
+		default:
+			throw std::runtime_error("Unknown connection type!");
+		}
 	}
 };
 

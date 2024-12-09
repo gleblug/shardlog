@@ -64,5 +64,10 @@ public:
 auto main() -> int {
 	lg::set_level(lg::level::info);
 	Application app{};
-	app.run();
+	try {
+		app.run();
+	}
+	catch (const std::exception& e) {
+		lg::critical("Unhandled execption: {}", e.what());
+	}
 }
