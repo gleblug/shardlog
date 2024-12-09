@@ -45,9 +45,9 @@ namespace COM {
 		std::weak_ptr<CSerialPort> m_sp;
 		std::string m_buffer;
 		std::string m_answer;
-		std::mutex m_mu;
 		std::condition_variable m_cv;
 	public:
+		std::mutex m_mu;
 		Listener(std::shared_ptr<CSerialPort> sp)
 			: m_sp(sp)
 			, m_buffer{}
@@ -58,7 +58,11 @@ namespace COM {
 		void onReadEvent(const char* portName, unsigned int readBufferLen) override {
 			char* data = new char[readBufferLen];
 			if (readBufferLen > 0 && data) {
-				int recLen = m_sp.lock()->readData(data, readBufferLen);
+				int recLen;
+				{
+					std::lock_guard<std::mutex> lg(m_mu);
+					recLen = m_sp.lock()->readData(data, readBufferLen);
+				}
 				if (recLen > 0) {
 					m_buffer += std::string(data, readBufferLen);
 					auto eolIdx = m_buffer.find("\n");
@@ -120,7 +124,9 @@ public:
 	}
 	void write(const std::string& msg) final {
 		auto msgCopy = msg + "\n\r";
+		std::lock_guard<std::mutex> lg(listener.m_mu);
 		m_sp->writeData(msgCopy.c_str(), msgCopy.size());
+		std::this_thread::sleep_for(std::chrono::duration<double>(10e-3));
 	}
 	std::string read() final {
 		return listener.lastAnswer();

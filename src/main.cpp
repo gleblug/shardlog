@@ -11,18 +11,18 @@
 #include "measurer/measurer.hpp"
 #include "meter/meter.hpp"
 #include "meter/connection/connection.hpp"
+#include "ui/console_choose.hpp"
 
 namespace lg = spdlog;
 using xtd::console;
 using xtd::ustring;
 
-BETTER_ENUM(Option, uint8_t,
-	DEVICES_LIST = 1,
-	MEASURE
-)
-
 class Application {
 public:
+	Application() {
+		xtd::console::cursor_visible(false);
+	};
+
 	void devicesList() {
 		Visa::ResourceManager rm{};
 		console::write_line("VISA devices:");
@@ -53,27 +53,10 @@ public:
 	}
 
 	void run() {
-		console::clear();
-		console::write_line("Please, choose option:");
-		for (const auto& value : Option::_values())
-			console::write_line("{} -- {}", value._to_index(), value._to_string());
-		auto optionIndex = ustring::parse<size_t>(console::read_line());
-		auto option = Option::_from_index(optionIndex);
-
-		switch (option) {
-		case Option::DEVICES_LIST:
-			devicesList();
-			break;
-		case Option::MEASURE:
-			measure();
-			break;
-		default:
-			console::write_line("Unknown option!");
-			break;
-		}
-
-		console::write_line("Press any button to exit...");
-		console::read_key();
+		ConsoleChoose::show({
+			{"List of devices", [this]() { devicesList(); }},
+			{"Start measurements", [this]() { measure(); }}
+		});
 	}
 };
 
