@@ -29,9 +29,6 @@ set(target_sources
     main.cpp
     measurer/measurer.cpp
     config/config_parser.cpp
-    #hardware/utils.cpp
-    #hardware/visa_instrument.cpp
-    #hardware/visa/resources.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
 
