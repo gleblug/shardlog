@@ -14,9 +14,10 @@
 - name: keithley6485
   configure:
     - "*RST"
-    - NPLC 1
+    - SYST:ZCH OFF
     - RANG 1E-6
-    - INIT
+    - NPLC 1
+    - FORM:ELEM READ
     - READ?
   read:
     - READ?
