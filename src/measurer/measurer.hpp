@@ -34,8 +34,7 @@ public:
 	void start();
 
 private:
-	void createFile();
-	void preRun();
+	std::string header();
 	void measure();
-	void append(const Measurement& meas);
+	void loop(std::ostream& os);
 };

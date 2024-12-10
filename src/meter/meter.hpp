@@ -35,6 +35,8 @@ private:
 	std::mutex m_mu;
 	std::condition_variable m_cv;
 	std::string m_value;
+	std::chrono::duration<double> m_averageResponseTime;
+	size_t m_responseCount;
 
 public:
 
@@ -45,7 +47,9 @@ public:
 		, m_recite{}
 		, m_mu{}
 		, m_cv{}
-		, m_value{}
+		, m_value{"0"}
+		, m_averageResponseTime{0}
+		, m_responseCount{0}
 	{
 		for (const auto& cmd : m_cmd.read)
 			lg::debug("Read command: {}", cmd);
@@ -78,6 +82,7 @@ public:
 
 	void read() {
 		lg::debug("Get value from {}... Write commands:", m_name);
+		auto startTime = std::chrono::steady_clock::now();
 		for (const auto& readCmd : m_cmd.read) {
 			m_conn->write(readCmd);
 			lg::debug(readCmd);
@@ -88,6 +93,10 @@ public:
 		std::lock_guard<std::mutex> lg(m_mu);
 		if (!value.empty())
 			m_value = value;
+		if (m_responseCount < 100) {
+			m_averageResponseTime += (std::chrono::steady_clock::now() - startTime);
+			++m_responseCount;
+		}
 		m_cv.notify_all();
 		m_recite.clear();
 	}
@@ -95,6 +104,10 @@ public:
 	std::string get() {
 		std::lock_guard<std::mutex> lg(m_mu);
 		return m_value;
+	}
+
+	auto averageResponseTime() {
+		return (m_averageResponseTime / m_responseCount);
 	}
 
 	static std::unique_ptr<Meter> create(const Config& conf) {
