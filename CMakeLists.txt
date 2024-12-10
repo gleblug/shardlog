@@ -27,6 +27,7 @@ add_references(nivisa)
 
 set(target_sources
     main.cpp
+    application.cpp
     measurer/measurer.cpp
     config/config_parser.cpp
 )
