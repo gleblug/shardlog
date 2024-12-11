@@ -11,21 +11,42 @@
 namespace lg = spdlog;
 namespace fs = std::filesystem;
 
-void operator>>(const YAML::Node& node, std::vector<std::string>& strings) {
+namespace ParserError {
+	std::exception not_a_map = std::runtime_error("YAML: this is not a map!");
+	std::exception not_a_sequence = std::runtime_error("YAML: this is not a sequence!");
+};
+
+void operator>>(const YAML::Node& node, Meter::Commands::List& list) {
+	if (!node.IsSequence())
+		throw ParserError::not_a_sequence;
 	std::transform(
 		node.begin(),
 		node.end(),
-		std::back_inserter(strings),
+		std::back_inserter(list),
 		[](const YAML::Node& node) { return node.as<std::string>(); }
 	);
 }
 
+void operator>>(const YAML::Node& node, std::vector<Meter::Commands::NamedList>& namedLists) {
+	if (!node.IsMap())
+		throw ParserError::not_a_map;
+	auto map = node.as<std::unordered_map<std::string, std::vector<std::string>>>();
+	for (const auto& [key, val] : map) {
+		namedLists.emplace_back(key, val);
+	}
+}
+
 void operator>>(const YAML::Node& node, Meter::Commands& commands) {
+	if (!node.IsMap())
+		throw ParserError::not_a_map;
 	commands.name = node["name"].as<std::string>();
-	node["configure"] >> commands.conf;
+	if (node["configure"].IsDefined())
+		node["configure"] >> commands.conf;
 	node["read"] >> commands.read;
-	node["set"] >> commands.set;
-	node["end"] >> commands.end;
+	if (node["set"].IsDefined())
+		node["set"] >> commands.set;
+	if (node["end"].IsDefined())
+		node["end"] >> commands.end;
 }
 
 class CommandParser {

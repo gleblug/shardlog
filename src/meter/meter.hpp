@@ -18,36 +18,43 @@ namespace chrono = std::chrono;
 class Meter {
 public:
 	struct Commands {
-		std::string name;
-		std::vector<std::string> conf;
-		std::vector<std::string> read;
-		std::vector<std::string> set;
-		std::vector<std::string> end;
+		using Name = std::string;
+		using List = std::vector<std::string>;
+		using NamedList = std::pair<Name, List>;
+
+		Name name;
+		List conf;
+		std::vector<NamedList> read;
+		List set;
+		List end;
 	};
 
 	struct SetValue {
-		chrono::duration<double> time;
-		std::string arg;
+		chrono::duration<double> timePoint;
+		std::vector<std::string> args;
 	};
 
+	using Name = std::string;
+	using Value = std::string;
+	using Values = std::unordered_map<Commands::Name, Value>;
+	using List = std::vector<std::unique_ptr<Meter>>;
+
 	struct Config {
-		std::string name;
+		Name name;
 		Commands commands;
 		ConnectionType connectionType;
 		std::string port;
 		std::vector<SetValue> setData;
 	};
 
-	using List = std::vector<std::unique_ptr<Meter>>;
-
 private:
-	std::string m_name;
+	Name m_name;
 	Commands m_cmd;
 	std::unique_ptr<Connection> m_conn;
 	std::atomic_flag m_recite;
 	std::mutex m_mu;
 	std::condition_variable m_cv;
-	std::string m_value;
+	Values m_values;
 	chrono::duration<double> m_averageResponseTime;
 	size_t m_responseCount;
 
@@ -63,12 +70,15 @@ public:
 		, m_recite{}
 		, m_mu{}
 		, m_cv{}
-		, m_value{ "0" }
+		, m_values{}
 		, m_averageResponseTime{ 0 }
 		, m_responseCount{ 0 }
 		, m_setData{setData}
 		, m_currSetIdx{ 0 }
 	{
+		for (const auto& title : readTitles())
+			m_values[title] = "0";
+
 		lg::debug("{} set data mode: {}", m_name, !m_setData.empty());
 		for (const auto& cmd : m_cmd.conf) {
 			lg::debug("{} config command: {}", m_name, cmd);
@@ -87,6 +97,12 @@ public:
 		return m_name;
 	}
 
+	std::vector<std::string> readTitles() const {
+		std::vector<std::string> res;
+		std::transform(m_cmd.read.cbegin(), m_cmd.read.cend(), std::back_inserter(res), [](const Commands::NamedList& list) { return list.first; });
+		return res;
+	}
+
 	bool needToSet() const {
 		return (m_currSetIdx < m_setData.size());
 	}
@@ -98,7 +114,7 @@ public:
 	void setCurrentData() {
 		lg::debug("{} trying to set data...", m_name);
 		for (const auto& cmd : m_cmd.set) {
-			auto argCmd = cmd + currentSetValue().arg;
+			auto argCmd = cmd + currentSetValue().args.at(0);
 			m_conn->write(argCmd);
 			lg::debug("Set command: {}", argCmd);
 		}
@@ -123,18 +139,22 @@ public:
 	}
 
 	void read() {
-		lg::debug("Get value from {}... Write commands:", m_name);
+		lg::debug("Get values from {}... Write commands:", m_name);
 		auto startTime = chrono::steady_clock::now();
-	
-		for (const auto& readCmd : m_cmd.read) {
-			m_conn->write(readCmd);
-			lg::debug(readCmd);
+		std::unordered_map<std::string, std::string> values{};
+
+		for (const auto& readCommands : m_cmd.read) {
+			for (const auto& cmd : readCommands.second) {
+				m_conn->write(cmd);
+				lg::debug("Write to {}: {}", m_name, cmd);
+			}
+			values[readCommands.first] = m_conn->read();
 		}
-		auto value = m_conn->read();
 
 		std::lock_guard<std::mutex> lg(m_mu);
-		if (!value.empty())
-			m_value = value;
+		for (const auto& [key, val] : values)
+			if (!val.empty())
+				m_values.at(key) = val;
 		if (m_responseCount < 100) {
 			m_averageResponseTime += (chrono::steady_clock::now() - startTime);
 			++m_responseCount;
@@ -143,9 +163,9 @@ public:
 		m_recite.clear();
 	}
 
-	std::string get() {
+	std::unordered_map<std::string, std::string> get() {
 		std::lock_guard<std::mutex> lg(m_mu);
-		return m_value;
+		return m_values;
 	}
 
 	chrono::duration<double> averageResponseTime() {

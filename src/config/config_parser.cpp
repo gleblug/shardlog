@@ -87,9 +87,10 @@ std::vector<Meter::Config> ConfigParser::meters() {
 			std::string line;
 			while (std::getline(setDataFile, line)) {
 				auto splitLine = xtd::ustring(line).split({ ',', '\t' });
+				std::transform(splitLine.cbegin(), splitLine.cend(), splitLine.begin(), [](const xtd::ustring& s) { return s.trim(); });
 				auto time = chrono::duration<double>(xtd::ustring::parse<double>(splitLine.at(0)));
-				auto arg = splitLine.at(1);
-				setData.emplace_back(time, arg);
+				std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
+				setData.emplace_back(time, args);
 			}
 		}
 

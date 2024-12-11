@@ -2,14 +2,16 @@
   configure:
     - CONF:CURR:DC
   read:
-    - CONF:CURR:DC 1E-3,3E-9
-    - READ?
+    current:
+        - CONF:CURR:DC 1E-3,3E-9
+        - READ?
 
 - name: rigol3068
   configure:
     - :CONF:VOLT:DC
   read:
-    - :MEAS:VOLT:DC?
+    voltage:
+        - :MEAS:VOLT:DC?
   
 - name: keithley6485
   configure:
@@ -20,17 +22,23 @@
     - FORM:ELEM READ
     - READ?
   read:
-    - READ?
+    current:
+        - READ?
 
 - name: koradKWR103
   configure:
     - LOCK:1
-    - VSET:5
+    - ISET:0.1
     - OUT:1
   read:
-    - IOUT?
+    voltage:
+        - VOUT?
+        - VOUT?
+    current:
+        - IOUT?
+        - IOUT?
   set:
-    - "ISET:{}"
+    - "VSET:"
   end:  
     - OUT:0
     - LOCK:0

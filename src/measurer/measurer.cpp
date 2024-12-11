@@ -69,13 +69,17 @@ void Measurer::start() {
 	xtd::console::reset_color();
 }
 
-std::string Measurer::header() {
+std::string Measurer::header() const {
 	return std::accumulate(
 		m_meters.cbegin(),
 		m_meters.cend(),
 		std::string("time,s"),
 		[](const std::string& prev, const std::unique_ptr<Meter>& meter) {
-			return std::format("{}\t{}", prev, meter->name());
+			auto readTitles = meter->readTitles();
+			return std::accumulate(
+				readTitles.cbegin(), readTitles.cend(), prev,
+				[&meter](const std::string& prev, const std::string& title) { return std::format("{}\t{},{}", prev, meter->name(), title); }
+			);
 		}
 	);
 	
@@ -84,13 +88,14 @@ std::string Measurer::header() {
 void Measurer::measure() {
 	std::vector<std::thread> threads;
 	std::mutex mu;
-	std::unordered_map<std::string, std::string> values;
+	std::unordered_map<std::string, std::unordered_map<std::string, std::string>> values;
 	
 	auto curTime = chrono::steady_clock::now();
 
 	for (const auto& meter : m_meters) {
-		threads.emplace_back([&meter, &values, this]() {
+		threads.emplace_back([&meter, &values, &mu, this]() {
 			meter->readFor(m_timeout);
+			std::lock_guard lg(mu);
 			values[meter->name()] = meter->get();
 		});
 	}
@@ -98,8 +103,11 @@ void Measurer::measure() {
 		th.join();
 
 	std::vector<std::string> res;
-	for (const auto& meter : m_meters)
-		res.push_back(values[meter->name()]);
+	for (const auto& meter : m_meters) {
+		for (const auto& title : meter->readTitles()) {
+			res.push_back(values.at(meter->name()).at(title));
+		}
+	}
 	std::lock_guard lg(m_mu);
 	m_meas = Measurement{ curTime - m_start, res };
 }
@@ -109,7 +117,7 @@ void Measurer::setMetersData() {
 	for (const auto& meter : m_meters) {
 		if (
 			meter->needToSet() &&
-			meter->currentSetValue().time <= (chrono::steady_clock::now() - m_start)
+			meter->currentSetValue().timePoint <= (chrono::steady_clock::now() - m_start)
 		) {
 			threads.emplace_back([&meter]() { meter->setCurrentData(); });
 		}
@@ -142,4 +150,5 @@ void Measurer::loop(std::ostream& os) {
 			os << m_meas << std::endl;
 		}
 	}
+	m_thread.join();
 }
