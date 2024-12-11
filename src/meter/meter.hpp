@@ -1,21 +1,33 @@
 #pragma once
-#include <spdlog/spdlog.h>
-
 #include <memory>
 #include <vector>
 #include <string>
 #include <chrono>
+#include <filesystem>
+
+#include <spdlog/spdlog.h>
+#include <xtd/ustring.h>
+#include <fmt/format.h>
 
 #include "connection/connection.hpp"
 
 namespace lg = spdlog;
+namespace fs = std::filesystem;
+namespace chrono = std::chrono;
 
 class Meter {
 public:
 	struct Commands {
 		std::string name;
-		std::vector<std::string> configure;
+		std::vector<std::string> conf;
 		std::vector<std::string> read;
+		std::vector<std::string> set;
+		std::vector<std::string> end;
+	};
+
+	struct SetValue {
+		chrono::duration<double> time;
+		std::string arg;
 	};
 
 	struct Config {
@@ -23,6 +35,7 @@ public:
 		Commands commands;
 		ConnectionType connectionType;
 		std::string port;
+		std::vector<SetValue> setData;
 	};
 
 	using List = std::vector<std::unique_ptr<Meter>>;
@@ -35,38 +48,67 @@ private:
 	std::mutex m_mu;
 	std::condition_variable m_cv;
 	std::string m_value;
-	std::chrono::duration<double> m_averageResponseTime;
+	chrono::duration<double> m_averageResponseTime;
 	size_t m_responseCount;
+
+	std::vector<SetValue> m_setData;
+	size_t m_currSetIdx;
 
 public:
 
-	Meter(const std::string& name, const Commands& cmd, std::unique_ptr<Connection>&& conn)
+	Meter(const std::string& name, const Commands& cmd, std::unique_ptr<Connection>&& conn, const std::vector<SetValue>& setData = {})
 		: m_name{ name }
 		, m_cmd{ cmd }
 		, m_conn{ std::move(conn) }
 		, m_recite{}
 		, m_mu{}
 		, m_cv{}
-		, m_value{"0"}
-		, m_averageResponseTime{0}
-		, m_responseCount{0}
+		, m_value{ "0" }
+		, m_averageResponseTime{ 0 }
+		, m_responseCount{ 0 }
+		, m_setData{setData}
+		, m_currSetIdx{ 0 }
 	{
-		for (const auto& cmd : m_cmd.read)
-			lg::debug("Read command: {}", cmd);
-		for (const auto& cmd : m_cmd.configure)
-			lg::debug("Config command: {}", cmd);
-		for (const auto& confCmd : m_cmd.configure)
-			m_conn->write(confCmd);
+		lg::debug("{} set data mode: {}", m_name, !m_setData.empty());
+		for (const auto& cmd : m_cmd.conf) {
+			lg::debug("{} config command: {}", m_name, cmd);
+			m_conn->write(cmd);
+		}
 	}
 	
+	~Meter() {
+		for (const auto& cmd : m_cmd.end) {
+			lg::debug("{} end command: {}", m_name, cmd);
+			m_conn->write(cmd);
+		}
+	}
+
 	std::string name() const {
 		return m_name;
 	}
 
+	bool needToSet() const {
+		return (m_currSetIdx < m_setData.size());
+	}
+
+	SetValue currentSetValue() const {
+		return m_setData.at(m_currSetIdx);
+	}
+
+	void setCurrentData() {
+		lg::debug("{} trying to set data...", m_name);
+		for (const auto& cmd : m_cmd.set) {
+			auto argCmd = cmd + currentSetValue().arg;
+			m_conn->write(argCmd);
+			lg::debug("Set command: {}", argCmd);
+		}
+		++m_currSetIdx;
+	}
+
 	template <typename T>
-	void readFor(const std::chrono::duration<T>& timeout) {
+	void readFor(const chrono::duration<T>& timeout) {
 		std::thread th;
-		std::unique_lock<std::mutex> lk(m_mu);
+		std::unique_lock lk(m_mu);
 
 		if (!m_recite.test_and_set())
 			th = std::thread(&Meter::read, this);
@@ -82,19 +124,19 @@ public:
 
 	void read() {
 		lg::debug("Get value from {}... Write commands:", m_name);
-		auto startTime = std::chrono::steady_clock::now();
+		auto startTime = chrono::steady_clock::now();
+	
 		for (const auto& readCmd : m_cmd.read) {
 			m_conn->write(readCmd);
 			lg::debug(readCmd);
 		}
-
 		auto value = m_conn->read();
 
 		std::lock_guard<std::mutex> lg(m_mu);
 		if (!value.empty())
 			m_value = value;
 		if (m_responseCount < 100) {
-			m_averageResponseTime += (std::chrono::steady_clock::now() - startTime);
+			m_averageResponseTime += (chrono::steady_clock::now() - startTime);
 			++m_responseCount;
 		}
 		m_cv.notify_all();
@@ -106,7 +148,7 @@ public:
 		return m_value;
 	}
 
-	auto averageResponseTime() {
+	chrono::duration<double> averageResponseTime() {
 		return (m_averageResponseTime / m_responseCount);
 	}
 
@@ -114,7 +156,8 @@ public:
 		return std::make_unique<Meter>(
 			conf.name,
 			conf.commands,
-			Connection::fromType(conf.connectionType, conf.port)
+			Connection::fromType(conf.connectionType, conf.port),
+			conf.setData
 		);
 	}
 };

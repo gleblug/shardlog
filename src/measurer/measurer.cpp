@@ -100,15 +100,29 @@ void Measurer::measure() {
 	std::vector<std::string> res;
 	for (const auto& meter : m_meters)
 		res.push_back(values[meter->name()]);
-	
+	std::lock_guard lg(m_mu);
 	m_meas = Measurement{ curTime - m_start, res };
 }
 
+void Measurer::setMetersData() {
+	std::vector<std::thread> threads;
+	for (const auto& meter : m_meters) {
+		if (
+			meter->needToSet() &&
+			meter->currentSetValue().time <= (chrono::steady_clock::now() - m_start)
+		) {
+			threads.emplace_back([&meter]() { meter->setCurrentData(); });
+		}
+	}
+	for (auto& th : threads)
+		th.join();
+}
 
 void Measurer::loop(std::ostream& os) {
 	m_start = chrono::steady_clock::now();
-	auto startTime = m_start;
+	auto startLastTime = m_start;
 
+	setMetersData();
 	m_thread = std::thread(&Measurer::measure, this);
 	while (true) {
 		if (xtd::console::key_available()) {
@@ -119,12 +133,13 @@ void Measurer::loop(std::ostream& os) {
 			}
 		}
 
-		if (chrono::steady_clock::now() - startTime > m_timeout) {
-			startTime = chrono::steady_clock::now();
-			if (m_thread.joinable())
-				m_thread.join();
-			os << m_meas << std::endl;
+		if (chrono::steady_clock::now() - startLastTime > m_timeout) {
+			startLastTime = chrono::steady_clock::now();
+			m_thread.join();
+			std::lock_guard lg(m_mu);
+			setMetersData();
 			m_thread = std::thread(&Measurer::measure, this);
+			os << m_meas << std::endl;
 		}
 	}
 }

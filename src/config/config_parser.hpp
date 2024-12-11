@@ -33,5 +33,4 @@ private:
 	void createFile();
 	void parse();
 	void save();
-	Meter::Commands parseCommands(const std::string& commandsName);
 };

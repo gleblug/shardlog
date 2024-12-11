@@ -74,24 +74,31 @@ namespace COM {
 			if (readBufferLen > 0 && data) {
 				int recLen;
 				{
-					std::lock_guard<std::mutex> lg(m_mu);
+					std::lock_guard lg(m_mu);
 					recLen = m_sp.lock()->readData(data, readBufferLen);
 				}
 				if (recLen > 0) {
 					m_buffer += std::string(data, readBufferLen);
-					auto eolIdx = m_buffer.find("\n");
+					auto eolIdx = m_buffer.find_last_of("\n");
 					if (eolIdx != std::string::npos) {
-						saveAnswer(eolIdx);
+						saveBuffer(m_buffer.substr(0, eolIdx));
 						m_buffer = m_buffer.substr(eolIdx + 1);
 					}
 				}
 			}
 			delete[] data;
 		}
-		void saveAnswer(const size_t eolIdx) {
-			std::lock_guard<std::mutex> lg(m_mu);
-			m_answer = m_buffer.substr(0, eolIdx);
-			m_cv.notify_all();
+		void saveBuffer(const std::string& buf) {
+			auto trimBuf = xtd::ustring(buf).trim();
+			if (!trimBuf.empty()) {
+				auto lastEolIdx = trimBuf.find_last_of("\n");
+				std::lock_guard<std::mutex> lg(m_mu);
+				if (lastEolIdx != std::string::npos)
+					m_answer = trimBuf.substr(lastEolIdx + 1);
+				else
+					m_answer = trimBuf;
+				m_cv.notify_all();
+			}
 		}
 		std::string lastAnswer() {
 			std::string res = "";
@@ -137,7 +144,7 @@ public:
 		m_sp->close();
 	}
 	void write(const std::string& msg) final {
-		auto msgCopy = msg + "\n\r";
+		auto msgCopy = msg + "\n";
 		std::lock_guard<std::mutex> lg(listener.m_mu);
 		m_sp->writeData(msgCopy.c_str(), msgCopy.size());
 		std::this_thread::sleep_for(std::chrono::duration<double>(10e-3));

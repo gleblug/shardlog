@@ -21,3 +21,16 @@
     - READ?
   read:
     - READ?
+
+- name: koradKWR103
+  configure:
+    - LOCK:1
+    - VSET:5
+    - OUT:1
+  read:
+    - IOUT?
+  set:
+    - "ISET:{}"
+  end:  
+    - OUT:0
+    - LOCK:0

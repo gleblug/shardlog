@@ -36,5 +36,6 @@ public:
 private:
 	std::string header();
 	void measure();
+	void setMetersData();
 	void loop(std::ostream& os);
 };

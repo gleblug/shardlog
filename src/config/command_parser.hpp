@@ -22,8 +22,10 @@ void operator>>(const YAML::Node& node, std::vector<std::string>& strings) {
 
 void operator>>(const YAML::Node& node, Meter::Commands& commands) {
 	commands.name = node["name"].as<std::string>();
-	node["configure"] >> commands.configure;
+	node["configure"] >> commands.conf;
 	node["read"] >> commands.read;
+	node["set"] >> commands.set;
+	node["end"] >> commands.end;
 }
 
 class CommandParser {
@@ -48,6 +50,6 @@ public:
 	Meter::Commands get(const std::string& commandName) {
 		if (!m_commandsMap.contains(commandName))
 			throw std::runtime_error(std::format("There is no {} in available commands!", commandName));
-		return m_commandsMap.at(commandName);
+		return m_commandsMap[commandName];
 	}
 };

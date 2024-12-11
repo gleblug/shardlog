@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <fstream>
+#include <filesystem>
 
 #include <xtd/ustring.h>
 #include <spdlog/spdlog.h>
@@ -9,6 +10,7 @@
 #include "command_parser.hpp"
 
 namespace lg = spdlog;
+namespace fs = std::filesystem;
 
 namespace Utils {
 	std::vector<std::string> split(const std::string& str, const char delim) {
@@ -46,7 +48,6 @@ void ConfigParser::createFile() {
 		"; Add meter options like this:\n"
 		"; [meter.<METER_NAME1>]\n"
 		"; commands = keysight1234 | rigol5678 -- from commands.yaml\n"
-		"; connection = com | visa\n"
 		"; port = auto | specific_port\n";
 }
 
@@ -74,11 +75,30 @@ std::vector<Meter::Config> ConfigParser::meters() {
 			throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
 		auto section = get(sname);
 
+		auto connType = ConnectionType::NIVISA;
+		auto port = section.get("port");
+		if (xtd::ustring(port).to_lower().contains("com"))
+			connType = ConnectionType::COM;
+
+		auto setDataPath = fs::path(section.get("setData"));
+		std::vector<Meter::SetValue> setData;
+		if (!setDataPath.empty()) {
+			std::ifstream setDataFile(setDataPath);
+			std::string line;
+			while (std::getline(setDataFile, line)) {
+				auto splitLine = xtd::ustring(line).split({ ',', '\t' });
+				auto time = chrono::duration<double>(xtd::ustring::parse<double>(splitLine.at(0)));
+				auto arg = splitLine.at(1);
+				setData.emplace_back(time, arg);
+			}
+		}
+
 		res.emplace_back(
 			meterName,
 			commands.get(section.get("commands")),
-			ConnectionType::_from_string(section.get("connection").c_str()),
-			section.get("port")
+			connType,
+			port,
+			setData
 		);
 	}
 	return res;
