@@ -7,14 +7,15 @@ namespace lg = spdlog;
 using xtd::console;
 
 auto main() -> int {
-	lg::set_level(lg::level::debug);
+	//lg::set_level(lg::level::debug);
+	lg::set_level(lg::level::info);
 	Application app{};
-	app.run();
-	//try {
-	//	app.run();
-	//}
-	//catch (const std::exception& e) {
-	//	lg::critical("Unhandled exception: {}", e.what());
-	//	console::read_key();
-	//}
+	//app.run();
+	try {
+		app.run();
+	}
+	catch (const std::exception& e) {
+		lg::critical("Unhandled exception: {}", e.what());
+		console::read_key();
+	}
 }
