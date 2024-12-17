@@ -34,4 +34,5 @@ set(target_sources
 list(TRANSFORM target_sources PREPEND "src/")
 
 add_sources(${target_sources})
+add_compile_definitions("DEBUG=$<CONFIG:Debug>")
 target_type(CONSOLE_APPLICATION)
