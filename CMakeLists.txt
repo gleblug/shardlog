@@ -30,6 +30,7 @@ set(target_sources
     application.cpp
     measurer/measurer.cpp
     config/config_parser.cpp
+    meter/meter.cpp
     meter/connection/connection.cpp
     meter/connection/comport.cpp
     meter/connection/nivisa.cpp
