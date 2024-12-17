@@ -1,5 +1,6 @@
 .vs/
 build/
+bin/
 
 # Prerequisites
 *.d
