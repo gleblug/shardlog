@@ -6,6 +6,7 @@
 #include <thread>
 #include <cstring>
 
+#include <xtd/ustring.h>
 #include <spdlog/spdlog.h>
 #include <better-enums/enum.h>
 #include <visa.h>
@@ -15,11 +16,7 @@
 
 namespace lg = spdlog;
 using namespace itas109;
-
-BETTER_ENUM(ConnectionType, uint8_t,
-	NIVISA,
-	COM
-);
+using xtd::ustring;
 
 class Comport;
 class Nivisa;
@@ -28,6 +25,12 @@ class Connection {
 protected:
 	std::string m_port;
 public:
+	enum class Type {
+		UNKNOWN,
+		NIVISA,
+		COM
+	};
+
 	explicit Connection(const std::string& port) : m_port(port) {}
 	virtual ~Connection() = default;
 	virtual void write(const std::string& msg) = 0;
@@ -42,15 +45,21 @@ public:
 		return std::make_unique<Derived>(port);
 	}
 
-	static std::unique_ptr<Connection> fromType(const ConnectionType type, const std::string& port) {
-		switch (type) {
-		case ConnectionType::NIVISA:
+	static std::unique_ptr<Connection> openAuto(const std::string& port) {
+		switch (type(port)) {
+		case Type::NIVISA:
 			return open<Nivisa>(port);
-		case ConnectionType::COM:
+		case Type::COM:
 			return open<Comport>(port);
 		default:
 			throw std::runtime_error("Unknown connection type!");
 		}
+	}
+
+	static Type type(const std::string& port) {
+		if (ustring(port).to_lower().contains("com"))
+			return Type::COM;
+		return Type::NIVISA;
 	}
 };
 

@@ -41,40 +41,40 @@ public:
 
 	struct Config {
 		Name name;
-		Commands commands;
-		ConnectionType connectionType;
+		std::string commandsName;
 		std::string port;
 		std::vector<SetValue> setData;
 	};
 
 private:
 	Name m_name;
-	Commands m_cmd;
 	std::unique_ptr<Connection> m_conn;
-	std::atomic_flag m_recite;
-	std::mutex m_mu;
-	std::condition_variable m_cv;
+	
+	std::vector<SetValue> m_setData;
+	size_t m_currSetIdx;
+	Commands m_cmd;
+	
 	Values m_values;
 	chrono::duration<double> m_averageResponseTime;
 	size_t m_responseCount;
 
-	std::vector<SetValue> m_setData;
-	size_t m_currSetIdx;
+	std::atomic_flag m_recite;
+	std::mutex m_mu;
+	std::condition_variable m_cv;
 
 public:
-
-	Meter(const std::string& name, const Commands& cmd, std::unique_ptr<Connection>&& conn, const std::vector<SetValue>& setData = {})
+	Meter(const std::string& name, const std::string& port, const std::vector<SetValue>& setData, const Commands& cmd)
 		: m_name{ name }
+		, m_conn{ Connection::openAuto(port) }
+		, m_setData{setData}
+		, m_currSetIdx{ 0 }
 		, m_cmd{ cmd }
-		, m_conn{ std::move(conn) }
-		, m_recite{}
-		, m_mu{}
-		, m_cv{}
 		, m_values{}
 		, m_averageResponseTime{ 0 }
 		, m_responseCount{ 0 }
-		, m_setData{setData}
-		, m_currSetIdx{ 0 }
+		, m_recite{}
+		, m_mu{}
+		, m_cv{}
 	{
 		for (const auto& title : readTitles())
 			m_values[title] = "0";
@@ -170,14 +170,5 @@ public:
 
 	chrono::duration<double> averageResponseTime() {
 		return (m_averageResponseTime / m_responseCount);
-	}
-
-	static std::unique_ptr<Meter> create(const Config& conf) {
-		return std::make_unique<Meter>(
-			conf.name,
-			conf.commands,
-			Connection::fromType(conf.connectionType, conf.port),
-			conf.setData
-		);
 	}
 };

@@ -5,6 +5,7 @@
 #include <CSerialPort/SerialPortInfo.h>
 
 #include "config/config_parser.hpp"
+#include "config/command_parser.hpp"
 #include "measurer/measurer.hpp"
 #include "meter/meter.hpp"
 #include "meter/connection/connection.hpp"
@@ -41,12 +42,22 @@ void Application::devicesList() {
 void Application::measurements() {
 	const auto configPath = "config.ini";
 	ConfigParser config(configPath);
+	auto measConfig = config.measurer();
+	
+	const auto commandsPath = "commands.yaml";
+	CommandParser commands(commandsPath);
 
 	Meter::List meters;
-	for (const auto& mconf : config.meters())
-		meters.push_back(Meter::create(mconf));
+	for (const auto& name : measConfig.usedMeters) {
+		auto meterConfig = config.meter(name);
+		meters.push_back(std::make_unique<Meter>(
+			meterConfig.name,
+			meterConfig.port,
+			meterConfig.setData,
+			commands.get(meterConfig.commandsName)
+		));
+	}
 
-	auto measConfig = config.measurer();
 	Measurer measurer(std::move(meters), measConfig.directory, measConfig.timeout);
 	measurer.start();
 

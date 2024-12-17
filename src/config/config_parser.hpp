@@ -27,7 +27,7 @@ private:
 public:
 	explicit ConfigParser(const std::string& configPath);
 	MeasurerConfig measurer();
-	std::vector<Meter::Config> meters();
+	Meter::Config meter(const std::string& name);
 
 private:
 	void createFile();

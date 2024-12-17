@@ -7,8 +7,6 @@
 #include <xtd/ustring.h>
 #include <spdlog/spdlog.h>
 
-#include "command_parser.hpp"
-
 namespace lg = spdlog;
 namespace fs = std::filesystem;
 
@@ -64,45 +62,32 @@ ConfigParser::MeasurerConfig ConfigParser::measurer() {
 	};
 }
 
-std::vector<Meter::Config> ConfigParser::meters() {
-	auto measConfig = measurer();
-	CommandParser commands("commands.yaml");
-	
-	std::vector<Meter::Config> res;
-	for (const auto& meterName : measConfig.usedMeters) {
-		auto sname = std::format("{}.{}", meterSection, meterName);
-		if (!has(sname))
-			throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
-		auto section = get(sname);
+Meter::Config ConfigParser::meter(const std::string &name) {
+	auto sname = std::format("{}.{}", meterSection, name);
+	if (!has(sname))
+		throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
+	auto section = get(sname);
 
-		auto connType = ConnectionType::NIVISA;
-		auto port = section.get("port");
-		if (xtd::ustring(port).to_lower().contains("com"))
-			connType = ConnectionType::COM;
-
-		auto setDataPath = fs::path(section.get("setData"));
-		std::vector<Meter::SetValue> setData;
-		if (!setDataPath.empty()) {
-			std::ifstream setDataFile(setDataPath);
-			std::string line;
-			while (std::getline(setDataFile, line)) {
-				auto splitLine = xtd::ustring(line).split({ ',', '\t' });
-				std::transform(splitLine.cbegin(), splitLine.cend(), splitLine.begin(), [](const xtd::ustring& s) { return s.trim(); });
-				auto time = chrono::duration<double>(xtd::ustring::parse<double>(splitLine.at(0)));
-				std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
-				setData.emplace_back(time, args);
-			}
+	auto setDataPath = fs::path(section.get("setData"));
+	std::vector<Meter::SetValue> setData;
+	if (!setDataPath.empty()) {
+		std::ifstream setDataFile(setDataPath);
+		std::string line;
+		while (std::getline(setDataFile, line)) {
+			auto splitLine = xtd::ustring(line).split({ ',', '\t' });
+			std::transform(splitLine.cbegin(), splitLine.cend(), splitLine.begin(), [](const xtd::ustring& s) { return s.trim(); });
+			auto time = chrono::duration<double>(xtd::ustring::parse<double>(splitLine.at(0)));
+			std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
+			setData.emplace_back(time, args);
 		}
-
-		res.emplace_back(
-			meterName,
-			commands.get(section.get("commands")),
-			connType,
-			port,
-			setData
-		);
 	}
-	return res;
+
+	return Meter::Config{
+		name,
+		section.get("commands"),
+		section.get("port"),
+		setData
+	};
 }
 
 
