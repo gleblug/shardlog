@@ -2,24 +2,14 @@
 
 #include <exception>
 #include <fstream>
-#include <filesystem>
 
 #include <xtd/ustring.h>
 #include <spdlog/spdlog.h>
 
-namespace lg = spdlog;
-namespace fs = std::filesystem;
+#include "../utils/utils.hpp"
 
-namespace Utils {
-	std::vector<std::string> split(const std::string& str, const char delim) {
-		std::vector<std::string> res{};
-		std::istringstream iss(str);
-		std::string buffer;
-		while (std::getline(iss, buffer, delim))
-			res.push_back(buffer);
-		return res;
-	}
-};
+namespace lg = spdlog;
+using xtd::ustring;
 
 ConfigParser::ConfigParser(const std::string& configPath)
 	: m_path{ configPath }
@@ -29,6 +19,7 @@ ConfigParser::ConfigParser(const std::string& configPath)
 		lg::warn("Can't find '{}'. Creating a new one from template...", m_path.string());
 		createFile();
 	}
+	parse();
 }
 
 void ConfigParser::createFile() {
@@ -40,25 +31,18 @@ void ConfigParser::createFile() {
 		{"directory", "./data"}
 		});
 	save();
-
-	std::ofstream(m_path, std::ios::app) << "\n"
-		"; meters = <METER_NAME1> <METER_NAME2> ...\n\n"
-		"; Add meter options like this:\n"
-		"; [meter.<METER_NAME1>]\n"
-		"; commands = keysight1234 | rigol5678 -- from commands.yaml\n"
-		"; port = auto | specific_port\n";
+	// TODO : create valid example
 }
 
-ConfigParser::MeasurerConfig ConfigParser::measurer() {
-	parse();
+Measurer::Config ConfigParser::measurer() {
 	if (!has(measurerSection))
 		throw std::runtime_error("There is no measurer section in config file!");
 	auto section = get(measurerSection);
-
 	return {
-		xtd::ustring::parse<double>(section.get("timeout")),
+		utils::split(section.get("meters")),
 		section.get("directory"),
-		Utils::split(section.get("meters"), ' ')
+		Measurer::TimeDuration(ustring::parse<double>(section.get("duration"))),
+		Measurer::TimeDuration(ustring::parse<double>(section.get("timeout"))),
 	};
 }
 
@@ -68,28 +52,12 @@ Meter::Config ConfigParser::meter(const std::string &name) {
 		throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
 	auto section = get(sname);
 
-	auto setDataPath = fs::path(section.get("setData"));
-	std::vector<Meter::SetValue> setData;
-	if (!setDataPath.empty()) {
-		std::ifstream setDataFile(setDataPath);
-		std::string line;
-		while (std::getline(setDataFile, line)) {
-			auto splitLine = xtd::ustring(line).split({ ',', '\t' });
-			std::transform(splitLine.cbegin(), splitLine.cend(), splitLine.begin(), [](const xtd::ustring& s) { return s.trim(); });
-			auto time = chrono::duration<double>(xtd::ustring::parse<double>(splitLine.at(0)));
-			std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
-			setData.emplace_back(time, args);
-		}
-	}
-
-	return Meter::Config{
-		name,
+	return {
 		section.get("commands"),
 		section.get("port"),
-		setData
+		section.get("setValues")
 	};
 }
-
 
 void ConfigParser::parse() {
 	lg::debug("Parsing '{}' config file...", m_path.string());

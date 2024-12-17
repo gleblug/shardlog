@@ -4,6 +4,9 @@
 #include <string>
 #include <chrono>
 #include <filesystem>
+#include <thread>
+#include <future>
+#include <functional>
 
 #include <spdlog/spdlog.h>
 #include <xtd/ustring.h>
@@ -14,6 +17,7 @@
 namespace lg = spdlog;
 namespace fs = std::filesystem;
 namespace chrono = std::chrono;
+using namespace std::chrono_literals;
 
 class Meter {
 public:
@@ -37,13 +41,12 @@ public:
 	using Name = std::string;
 	using Value = std::string;
 	using Values = std::unordered_map<Commands::Name, Value>;
-	using List = std::vector<std::unique_ptr<Meter>>;
+	using Ptr = std::unique_ptr<Meter>;
 
 	struct Config {
-		Name name;
 		std::string commandsName;
 		std::string port;
-		std::vector<SetValue> setData;
+		std::string setValuesPath;
 	};
 
 private:
@@ -58,9 +61,9 @@ private:
 	chrono::duration<double> m_averageResponseTime;
 	size_t m_responseCount;
 
-	std::atomic_flag m_recite;
+	std::thread m_thread;
+	std::future<void> m_future;
 	std::mutex m_mu;
-	std::condition_variable m_cv;
 
 public:
 	Meter(const std::string& name, const std::string& port, const std::vector<SetValue>& setData, const Commands& cmd)
@@ -72,9 +75,9 @@ public:
 		, m_values{}
 		, m_averageResponseTime{ 0 }
 		, m_responseCount{ 0 }
-		, m_recite{}
+		, m_thread{}
+		, m_future{}
 		, m_mu{}
-		, m_cv{}
 	{
 		for (const auto& title : readTitles())
 			m_values[title] = "0";
@@ -87,6 +90,7 @@ public:
 	}
 	
 	~Meter() {
+		m_thread.join();
 		for (const auto& cmd : m_cmd.end) {
 			lg::debug("{} end command: {}", m_name, cmd);
 			m_conn->write(cmd);
@@ -121,21 +125,16 @@ public:
 		++m_currSetIdx;
 	}
 
-	template <typename T>
-	void readFor(const chrono::duration<T>& timeout) {
-		std::thread th;
-		std::unique_lock lk(m_mu);
-
-		if (!m_recite.test_and_set())
-			th = std::thread(&Meter::read, this);
-
-		auto status = m_cv.wait_for(lk, timeout);
-		if (th.joinable()) {
-			if (status == std::cv_status::timeout)
-				th.detach();
-			else
-				th.join();
+	void readFor(const chrono::duration<double>& timeout) {
+		if (!m_future.valid() || m_future.wait_for(0ms) == std::future_status::ready) {
+			if (m_thread.joinable())
+				m_thread.join();
+			std::packaged_task<void()> task(std::bind(&Meter::read, this));
+			m_future = task.get_future();
+			m_thread = std::thread(std::move(task));
 		}
+
+		m_future.wait_for(timeout);
 	}
 
 	void read() {
@@ -159,8 +158,6 @@ public:
 			m_averageResponseTime += (chrono::steady_clock::now() - startTime);
 			++m_responseCount;
 		}
-		m_cv.notify_all();
-		m_recite.clear();
 	}
 
 	std::unordered_map<std::string, std::string> get() {

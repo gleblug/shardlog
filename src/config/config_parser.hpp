@@ -4,21 +4,14 @@
 
 #include <mini/ini.h>
 #include <xtd/ustring.h>
-#include <better-enums/enum.h>
 
 #include "../meter/meter.hpp"
+#include "../measurer/measurer.hpp"
 
 namespace ini = mINI;
 namespace fs = std::filesystem;
 
 class ConfigParser : private ini::INIStructure {
-public:
-	struct MeasurerConfig {
-		double timeout;
-		std::string directory;
-		std::vector<std::string> usedMeters;
-	};
-
 private:
 	fs::path m_path;
 	const std::string measurerSection = "measurer";
@@ -26,7 +19,7 @@ private:
 
 public:
 	explicit ConfigParser(const std::string& configPath);
-	MeasurerConfig measurer();
+	Measurer::Config measurer();
 	Meter::Config meter(const std::string& name);
 
 private:

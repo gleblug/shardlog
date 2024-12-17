@@ -101,7 +101,7 @@ namespace COM {
 			auto trimBuf = xtd::ustring(buf).trim();
 			if (!trimBuf.empty()) {
 				auto lastEolIdx = trimBuf.find_last_of("\n");
-				std::lock_guard<std::mutex> lg(m_mu);
+				std::lock_guard lg(m_mu);
 				if (lastEolIdx != std::string::npos)
 					m_answer = trimBuf.substr(lastEolIdx + 1);
 				else
@@ -111,12 +111,12 @@ namespace COM {
 		}
 		std::string lastAnswer() {
 			std::string res = "";
-			std::unique_lock<std::mutex> lk(m_mu);
+			std::unique_lock lk(m_mu);
 
 			std::swap(res, m_answer);
 			if (!res.empty())
 				return res;
-
+			// TODO : fix unlock unown mutex
 			if (m_cv.wait_for(lk, std::chrono::seconds(1)) == std::cv_status::timeout) {
 				lg::warn("COM port timeout");
 				return "";
@@ -144,7 +144,7 @@ public:
 		m_sp->setReadIntervalTimeout(1);
 		m_sp->setMinByteReadNotify(10);
 		if (!m_sp->open())
-			lg::error("Failed to open '{}'!");
+			throw std::runtime_error(std::format("Unable to open {}", m_port));
 		m_sp->connectReadEvent(&listener);
 	}
 	~Comport() {
@@ -154,7 +154,7 @@ public:
 	}
 	void write(const std::string& msg) final {
 		auto msgCopy = msg + "\n";
-		std::lock_guard<std::mutex> lg(listener.m_mu);
+		std::lock_guard lg(listener.m_mu);
 		m_sp->writeData(msgCopy.c_str(), msgCopy.size());
 		std::this_thread::sleep_for(std::chrono::duration<double>(10e-3));
 	}
@@ -185,7 +185,7 @@ namespace Visa {
 			ViUInt32 itemCnt;
 			ViFindList list;
 			if (viFindRsrc(m_rm, (ViString)"USB?*INSTR", &list, &itemCnt, desc) < VI_SUCCESS) {
-				lg::error("Can't find resources on resource manager!");
+				lg::debug("Can't find resources on resource manager!");
 				return {};
 			}
 
@@ -206,10 +206,9 @@ namespace Visa {
 		}
 		ViSession openResource(const std::string& port) {
 			ViSession vi;
-			if (viOpen(m_rm, (ViRsrc)port.c_str(), VI_NULL, VI_NULL, &vi) < VI_SUCCESS) {
-				lg::error("Can't open resource {}!", port);
-				return 0;
-			}
+			if (viOpen(m_rm, (ViRsrc)port.c_str(), VI_NULL, VI_NULL, &vi) < VI_SUCCESS)
+				throw std::runtime_error(std::format("Unable to open {}", port));
+
 			return vi;
 		}
 	};
@@ -244,6 +243,7 @@ public:
 			return "";
 		}
 		buf[retCnt] = '\0';
-		return buf;
+		std::string res(buf);
+		return res.substr(0, res.find_last_of('\n'));
 	}
 };

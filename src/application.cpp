@@ -6,6 +6,7 @@
 
 #include "config/config_parser.hpp"
 #include "config/command_parser.hpp"
+#include "config/set_value_parser.hpp"
 #include "measurer/measurer.hpp"
 #include "meter/meter.hpp"
 #include "meter/connection/connection.hpp"
@@ -32,6 +33,7 @@ void Application::devicesList() {
 		auto conn = Connection::open<Nivisa>(desc);
 		console::write_line("{}\t{}", desc, conn->query("*IDN?"));
 	}
+	console::write_line();
 	console::write_line("COM devices:");
 	for (const auto& comport : CSerialPortInfo::availablePortInfos()) {
 		auto conn = Connection::open<Comport>(comport.portName);
@@ -47,18 +49,19 @@ void Application::measurements() {
 	const auto commandsPath = "commands.yaml";
 	CommandParser commands(commandsPath);
 
-	Meter::List meters;
-	for (const auto& name : measConfig.usedMeters) {
+	std::vector<Meter::Ptr> meters;
+	for (const auto& name : measConfig.meterNames) {
 		auto meterConfig = config.meter(name);
+		auto setValues = SetValueParser(meterConfig.setValuesPath);
 		meters.push_back(std::make_unique<Meter>(
-			meterConfig.name,
+			name,
 			meterConfig.port,
-			meterConfig.setData,
+			setValues.get(),
 			commands.get(meterConfig.commandsName)
 		));
 	}
 
-	Measurer measurer(std::move(meters), measConfig.directory, measConfig.timeout);
+	Measurer measurer(std::move(meters), measConfig.directory, measConfig.duration, measConfig.timeout);
 	measurer.start();
 
 	lg::info("The measures ends correctly.");

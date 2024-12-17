@@ -7,7 +7,7 @@ namespace lg = spdlog;
 using xtd::console;
 
 auto main() -> int {
-#if (DEBUG == 1)
+#if DEBUG
 	lg::set_level(lg::level::debug);
 #else
 	lg::set_level(lg::level::warn);

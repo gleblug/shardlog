@@ -8,34 +8,45 @@
 
 #include <xtd/console.h>
 #include <xtd/ustring.h>
-#include <fmt/format.h>
+#include <fmt/std.h>
 
 #include "../meter/meter.hpp"
+
+using xtd::ustring;
+using xtd::console;
 
 std::ostream& operator<<(std::ostream& os, const Measurement& meas) {
 	return os << std::accumulate(
 		meas.values.cbegin(),
 		meas.values.cend(),
-		std::format("{:.3f}", meas.time.count()),
+		std::format("{:.3f}", meas.fromStart.count()),
 		[](const std::string& prev, const std::string& val) {
-			return std::format("{}\t{}", prev, xtd::ustring(val).trim().c_str());
+			return std::format("{}\t{}", prev, ustring(val).trim().c_str());
 		}
 	);
 }
-Measurer::Measurer(Meter::List&& meters, const std::string& directory, const double timeout)
+Measurer::Measurer(std::vector<Meter::Ptr>&& meters, const fs::path& directory, const TimeDuration& duration, const TimeDuration& timeout)
 	: m_meters{ std::move(meters) }
 	, m_path{ fs::path(directory) / std::format(
 		"DATA_{0:%F}_{0:%H-%M-%S}.csv",
 		chrono::floor<chrono::seconds>(chrono::current_zone()->to_local(chrono::system_clock::now()))
 	) }
-	, m_timeout{ (timeout > 0.05) ? timeout : 0.05 }
+	, m_duration{ duration }
+	, m_timeout{ (timeout.count() > 0.05) ? timeout : TimeDuration(0.05) }
 	, m_thread{}
 	, m_mu{}
 {
 	if (!fs::exists(m_path.parent_path()))
 		fs::create_directory(m_path.parent_path());
 	std::ofstream(m_path, std::ios::out);
-	lg::info("Save data into '{}' with timeout '{}s'", m_path.string(), m_timeout.count());
+
+	const auto width = 24;
+	xtd::console::write_line(fmt::format(
+		"Measurer configs:\n{:<{}}{}\n{:<{}}{}\n{:<{}}{}",
+		"  - save data into", width, m_path,
+		"  - duration", width, m_duration,
+		"  - timeout", width, m_timeout
+	));
 }
 
 Measurer::~Measurer() {
@@ -52,7 +63,6 @@ void Measurer::start() {
 	std::ofstream file(m_path, std::ios::app);
 	file << header() << std::endl;
 
-	xtd::console::foreground_color(xtd::console_color::cyan);
 	xtd::console::write_line("Measurements started at {}", chrono::system_clock::now());
 	xtd::console::write_line("Press CTRL+Q to stop measures");
 
@@ -61,12 +71,11 @@ void Measurer::start() {
 	xtd::console::write_line("Average response time:");
 	for (const auto& meter : m_meters) {
 		xtd::console::write_line(fmt::format(
-			"{:<16}{}ms",
+			"  - {:<20}{}",
 			meter->name(),
-			chrono::duration_cast<chrono::milliseconds>(meter->averageResponseTime()).count()
+			chrono::duration_cast<chrono::milliseconds>(meter->averageResponseTime())
 		));
 	}
-	xtd::console::reset_color();
 }
 
 std::string Measurer::header() const {
@@ -88,13 +97,13 @@ std::string Measurer::header() const {
 void Measurer::measure() {
 	std::vector<std::thread> threads;
 	std::mutex mu;
-	std::unordered_map<std::string, std::unordered_map<std::string, std::string>> values;
+	std::unordered_map<Meter::Name, Meter::Values> values;
 	
 	auto curTime = chrono::steady_clock::now();
 
 	for (const auto& meter : m_meters) {
 		threads.emplace_back([&meter, &values, &mu, this]() {
-			meter->readFor(m_timeout);
+			meter->readFor(m_timeout - TimeDuration(.005));
 			std::lock_guard lg(mu);
 			values[meter->name()] = meter->get();
 		});
@@ -104,9 +113,9 @@ void Measurer::measure() {
 
 	std::vector<std::string> res;
 	for (const auto& meter : m_meters) {
-		for (const auto& title : meter->readTitles()) {
-			res.push_back(values.at(meter->name()).at(title));
-		}
+		auto val = values.at(meter->name());
+		for (const auto& title : meter->readTitles())
+			res.push_back(val.at(title));
 	}
 	std::lock_guard lg(m_mu);
 	m_meas = Measurement{ curTime - m_start, res };
@@ -133,6 +142,9 @@ void Measurer::loop(std::ostream& os) {
 	setMetersData();
 	m_thread = std::thread(&Measurer::measure, this);
 	while (true) {
+		if (chrono::steady_clock::now() - m_start > m_duration)
+			break;
+
 		if (xtd::console::key_available()) {
 			auto key = xtd::console::read_key();
 			if (key.modifiers() == xtd::console_modifiers::control && key.key() == xtd::console_key::q) {
