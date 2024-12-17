@@ -28,7 +28,7 @@ namespace COM {
 			, m_answer{}
 			, m_mu{}
 			, m_cv{}
-			, m_timeout{2.0}
+			, m_timeout{1.0}
 		{}
 		void onReadEvent(const char* portName, unsigned int readBufferLen) override;
 		void saveBuffer(const std::string& buf);

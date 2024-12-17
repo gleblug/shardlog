@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <cstdint>
 
 #include "../meter/meter.hpp"
 
@@ -35,6 +36,7 @@ private:
 	fs::path m_path;
 	TimeDuration m_duration;
 	TimeDuration m_timeout;
+	uint64_t m_counter;
 
 	TimePoint m_start;
 	Measurement m_meas;

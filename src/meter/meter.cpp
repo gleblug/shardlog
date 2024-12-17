@@ -47,7 +47,7 @@ void Meter::setCurrentData() {
 	++m_currSetIdx;
 }
 
-void Meter::readFor(const chrono::duration<double>& timeout) {
+void Meter::readUntil(const chrono::steady_clock::time_point& time_point) {
 	if (!m_future.valid() || m_future.wait_for(0ms) == std::future_status::ready) {
 		if (m_thread.joinable())
 			m_thread.join();
@@ -56,7 +56,7 @@ void Meter::readFor(const chrono::duration<double>& timeout) {
 		m_thread = std::thread(std::move(task));
 	}
 
-	m_future.wait_for(timeout);
+	m_future.wait_until(time_point);
 }
 
 void Meter::read() {

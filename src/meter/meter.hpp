@@ -81,7 +81,7 @@ public:
 
 	std::vector<std::string> readTitles() const;
 	void setCurrentData();
-	void readFor(const chrono::duration<double>& timeout);
+	void readUntil(const chrono::steady_clock::time_point& time_point);
 	void read();
 
 	std::unordered_map<std::string, std::string> get() {

@@ -33,6 +33,7 @@ Measurer::Measurer(std::vector<Meter::Ptr>&& meters, const fs::path& directory, 
 	) }
 	, m_duration{ duration }
 	, m_timeout{ (timeout.count() > 0.05) ? timeout : TimeDuration(0.05) }
+	, m_counter{ 0 }
 	, m_thread{}
 	, m_mu{}
 {
@@ -100,10 +101,9 @@ void Measurer::measure() {
 	std::unordered_map<Meter::Name, Meter::Values> values;
 	
 	auto curTime = chrono::steady_clock::now();
-
 	for (const auto& meter : m_meters) {
 		threads.emplace_back([&meter, &values, &mu, this]() {
-			meter->readFor(m_timeout - TimeDuration(.005));
+			meter->readUntil(m_start + chrono::duration_cast<chrono::nanoseconds>(m_timeout) * m_counter - chrono::milliseconds(10));
 			std::lock_guard lg(mu);
 			values[meter->name()] = meter->get();
 		});
@@ -137,10 +137,8 @@ void Measurer::setMetersData() {
 
 void Measurer::loop(std::ostream& os) {
 	m_start = chrono::steady_clock::now();
-	auto startLastTime = m_start;
-
-	setMetersData();
 	m_thread = std::thread(&Measurer::measure, this);
+	m_counter = 1;
 	while (true) {
 		if (chrono::steady_clock::now() - m_start > m_duration)
 			break;
@@ -153,12 +151,12 @@ void Measurer::loop(std::ostream& os) {
 			}
 		}
 
-		if (chrono::steady_clock::now() - startLastTime > m_timeout) {
-			startLastTime = chrono::steady_clock::now();
+		if (chrono::steady_clock::now() - m_start >= m_timeout * m_counter) {
+			++m_counter;
 			m_thread.join();
 			std::lock_guard lg(m_mu);
-			setMetersData();
 			m_thread = std::thread(&Measurer::measure, this);
+			//setMetersData();
 			os << m_meas << std::endl;
 		}
 	}
