@@ -30,6 +30,9 @@ set(target_sources
     application.cpp
     measurer/measurer.cpp
     config/config_parser.cpp
+    meter/connection/connection.cpp
+    meter/connection/comport.cpp
+    meter/connection/nivisa.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
 

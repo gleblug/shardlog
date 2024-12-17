@@ -9,7 +9,8 @@
 #include "config/set_value_parser.hpp"
 #include "measurer/measurer.hpp"
 #include "meter/meter.hpp"
-#include "meter/connection/connection.hpp"
+#include "meter/connection/comport.hpp"
+#include "meter/connection/nivisa.hpp"
 #include "ui/console_choose.hpp"
 
 namespace lg = spdlog;
