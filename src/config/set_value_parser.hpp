@@ -3,7 +3,7 @@
 #include <string>
 #include <filesystem>
 
-#include "../utils/utils.hpp"
+#include "../utils/string.hpp"
 #include "../meter/meter.hpp"
 
 namespace fs = std::filesystem;

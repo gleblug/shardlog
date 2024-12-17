@@ -6,7 +6,7 @@
 #include <xtd/ustring.h>
 #include <spdlog/spdlog.h>
 
-#include "../utils/utils.hpp"
+#include "../utils/string.hpp"
 
 namespace lg = spdlog;
 using xtd::ustring;
