@@ -84,6 +84,14 @@ public:
 	void readUntil(const chrono::steady_clock::time_point& time_point);
 	void read();
 
+	bool ready() {
+		for (size_t i = 0; i < 5; ++i) {
+			if (m_conn->query("*IDN?") != "")
+				return true;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+		return false;
+	}
 	std::unordered_map<std::string, std::string> get() {
 		std::lock_guard<std::mutex> lg(m_mu);
 		return m_values;

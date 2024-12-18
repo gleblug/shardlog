@@ -64,15 +64,15 @@ void Measurer::start() {
 	
 	std::ofstream file(m_path, std::ios::app);
 	file << header() << std::endl;
-
-	xtd::console::write_line("Measurements started at {}", chrono::system_clock::now());
-	xtd::console::write_line("Press CTRL+Q to stop measures");
+	
+	console::write_line("Measurements started at {}", chrono::system_clock::now());
+	console::write_line("Press CTRL+Q to stop measures");
 
 	loop(file);
 
-	xtd::console::write_line("Average response time:");
+	console::write_line("Average response time:");
 	for (const auto& meter : m_meters) {
-		xtd::console::write_line(fmt::format(
+		console::write_line(fmt::format(
 			"  - {:<20}{}",
 			meter->name(),
 			chrono::duration_cast<chrono::milliseconds>(meter->averageResponseTime())

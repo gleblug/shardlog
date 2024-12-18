@@ -1,5 +1,7 @@
 #include "meter.hpp"
 
+#include <exception>
+
 Meter::Meter(const std::string& name, const std::string& port, const std::vector<SetValue>& setData, const Commands& cmd)
 	: m_name{ name }
 	, m_conn{ Connection::openAuto(port) }
@@ -21,6 +23,11 @@ Meter::Meter(const std::string& name, const std::string& port, const std::vector
 		m_name, port, setData.size()
 	);
 
+	lg::debug("Connect to {}...", m_name);
+	if (!ready()) {
+		throw std::runtime_error(std::format("Can't connect to {}!", m_name));
+	}
+	
 	for (const auto& cmd : m_cmd.conf) {
 		lg::debug("{} config command: {}", m_name, cmd);
 		m_conn->write(cmd);
@@ -47,7 +54,7 @@ void Meter::setCurrentData() {
 	for (const auto& cmd : m_cmd.set) {
 		auto argCmd = cmd + currentSetValue().args.at(0);
 		m_conn->write(argCmd);
-		lg::debug("Set command: {}", argCmd);
+		lg::debug("Set command: '{}'", argCmd);
 	}
 	++m_currSetIdx;
 }

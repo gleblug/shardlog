@@ -9,15 +9,15 @@ using xtd::ustring;
 using namespace COM;
 
 void Listener::onReadEvent(const char* portName, unsigned int readBufferLen) {
-	char* data = new char[readBufferLen];
+	char* data = new char[4096];
 	if (readBufferLen > 0 && data) {
 		int recLen;
 		{
 			std::lock_guard lg(m_mu);
-			recLen = m_sp.lock()->readData(data, readBufferLen);
+			recLen = m_sp.lock()->readAllData(data);
 		}
 		if (recLen > 0) {
-			m_buffer += std::string(data, readBufferLen);
+			m_buffer += std::string(data, recLen);
 			auto eolIdx = m_buffer.find_last_of("\n");
 			if (eolIdx != std::string::npos) {
 				saveBuffer(m_buffer.substr(0, eolIdx));
@@ -74,7 +74,7 @@ Comport::Comport(const std::string& port)
 		FlowNone
 	);
 	m_sp->setReadIntervalTimeout(1);
-	m_sp->setMinByteReadNotify(4);
+	m_sp->setMinByteReadNotify(1);
 	if (!m_sp->open())
 		throw std::runtime_error(std::format("Unable to open {}", m_port));
 	m_sp->connectReadEvent(&m_listener);
@@ -90,5 +90,5 @@ void Comport::write(const std::string& msg) {
 	auto msgCopy = msg + "\n";
 	std::lock_guard lg(m_listener.m_mu);
 	m_sp->writeData(msgCopy.c_str(), msgCopy.size());
-	std::this_thread::sleep_for(std::chrono::duration<double>(5e-3));
+	std::this_thread::sleep_for(chrono::milliseconds(8));
 }
