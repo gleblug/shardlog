@@ -15,8 +15,12 @@ Meter::Meter(const std::string& name, const std::string& port, const std::vector
 {
 	for (const auto& title : readTitles())
 		m_values[title] = "0";
+	lg::debug("{} meter configs:\n"
+		"  - port: {}\n"
+		"  - setData size: {}\n",
+		m_name, port, setData.size()
+	);
 
-	lg::debug("{} set data mode: {}", m_name, !m_setData.empty());
 	for (const auto& cmd : m_cmd.conf) {
 		lg::debug("{} config command: {}", m_name, cmd);
 		m_conn->write(cmd);
@@ -38,6 +42,7 @@ std::vector<std::string> Meter::readTitles() const {
 }
 
 void Meter::setCurrentData() {
+	std::lock_guard lg{ m_mu };
 	lg::debug("{} trying to set data...", m_name);
 	for (const auto& cmd : m_cmd.set) {
 		auto argCmd = cmd + currentSetValue().args.at(0);
@@ -64,6 +69,7 @@ void Meter::read() {
 	auto startTime = chrono::steady_clock::now();
 	std::unordered_map<std::string, std::string> values{};
 
+	std::lock_guard lg{ m_mu };
 	for (const auto& readCommands : m_cmd.read) {
 		for (const auto& cmd : readCommands.second) {
 			m_conn->write(cmd);
@@ -72,7 +78,6 @@ void Meter::read() {
 		values[readCommands.first] = m_conn->read();
 	}
 
-	std::lock_guard<std::mutex> lg(m_mu);
 	for (const auto& [key, val] : values)
 		if (!val.empty())
 			m_values.at(key) = val;

@@ -65,9 +65,16 @@ Comport::Comport(const std::string& port)
 	, m_sp{ new CSerialPort }
 	, m_listener{ m_sp }
 {
-	m_sp->init(m_port.c_str());
+	m_sp->init(
+		m_port.c_str(),
+		9600,
+		ParityNone,
+		DataBits8,
+		StopOne,
+		FlowNone
+	);
 	m_sp->setReadIntervalTimeout(1);
-	m_sp->setMinByteReadNotify(10);
+	m_sp->setMinByteReadNotify(4);
 	if (!m_sp->open())
 		throw std::runtime_error(std::format("Unable to open {}", m_port));
 	m_sp->connectReadEvent(&m_listener);

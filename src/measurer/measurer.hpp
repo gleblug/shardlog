@@ -44,13 +44,12 @@ private:
 	std::mutex m_mu;
 
 public:
-	Measurer(std::vector<Meter::Ptr>&& meters, const fs::path& directory, const TimeDuration& duration, const TimeDuration& timeout);
+	Measurer(const std::vector<Meter::Ptr>& meters, const fs::path& directory, const TimeDuration& duration, const TimeDuration& timeout);
 	~Measurer();
 	void start();
 
 private:
 	std::string header() const;
 	void measure();
-	void setMetersData();
 	void loop(std::ostream& os);
 };

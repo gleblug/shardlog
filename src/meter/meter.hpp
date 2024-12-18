@@ -41,7 +41,7 @@ public:
 	using Name = std::string;
 	using Value = std::string;
 	using Values = std::unordered_map<Commands::Name, Value>;
-	using Ptr = std::unique_ptr<Meter>;
+	using Ptr = std::shared_ptr<Meter>;
 
 	struct Config {
 		std::string commandsName;

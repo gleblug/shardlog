@@ -11,6 +11,7 @@
 #include <fmt/std.h>
 
 #include "../meter/meter.hpp"
+#include "setter.hpp"
 
 using xtd::ustring;
 using xtd::console;
@@ -25,8 +26,8 @@ std::ostream& operator<<(std::ostream& os, const Measurement& meas) {
 		}
 	);
 }
-Measurer::Measurer(std::vector<Meter::Ptr>&& meters, const fs::path& directory, const TimeDuration& duration, const TimeDuration& timeout)
-	: m_meters{ std::move(meters) }
+Measurer::Measurer(const std::vector<Meter::Ptr>& meters, const fs::path& directory, const TimeDuration& duration, const TimeDuration& timeout)
+	: m_meters{ meters }
 	, m_path{ fs::path(directory) / std::format(
 		"DATA_{0:%F}_{0:%H-%M-%S}.csv",
 		chrono::floor<chrono::seconds>(chrono::current_zone()->to_local(chrono::system_clock::now()))
@@ -84,7 +85,7 @@ std::string Measurer::header() const {
 		m_meters.cbegin(),
 		m_meters.cend(),
 		std::string("time,s"),
-		[](const std::string& prev, const std::unique_ptr<Meter>& meter) {
+		[](const std::string& prev, const Meter::Ptr meter) {
 			auto readTitles = meter->readTitles();
 			return std::accumulate(
 				readTitles.cbegin(), readTitles.cend(), prev,
@@ -121,24 +122,15 @@ void Measurer::measure() {
 	m_meas = Measurement{ curTime - m_start, res };
 }
 
-void Measurer::setMetersData() {
-	std::vector<std::thread> threads;
-	for (const auto& meter : m_meters) {
-		if (
-			meter->needToSet() &&
-			meter->currentSetValue().timePoint <= (chrono::steady_clock::now() - m_start)
-		) {
-			threads.emplace_back([&meter]() { meter->setCurrentData(); });
-		}
-	}
-	for (auto& th : threads)
-		th.join();
-}
-
 void Measurer::loop(std::ostream& os) {
 	m_start = chrono::steady_clock::now();
+
 	m_thread = std::thread(&Measurer::measure, this);
 	m_counter = 1;
+
+	Setter setter(m_meters);
+	setter.start();
+
 	while (true) {
 		if (chrono::steady_clock::now() - m_start > m_duration)
 			break;
@@ -156,9 +148,10 @@ void Measurer::loop(std::ostream& os) {
 			m_thread.join();
 			std::lock_guard lg(m_mu);
 			m_thread = std::thread(&Measurer::measure, this);
-			//setMetersData();
 			os << m_meas << std::endl;
 		}
 	}
+
+	setter.stop();
 	m_thread.join();
 }

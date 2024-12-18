@@ -62,7 +62,7 @@ void Application::measurements() {
 		));
 	}
 
-	Measurer measurer(std::move(meters), measConfig.directory, measConfig.duration, measConfig.timeout);
+	Measurer measurer(meters, measConfig.directory, measConfig.duration, measConfig.timeout);
 	measurer.start();
 
 	lg::info("The measures ends correctly.");
