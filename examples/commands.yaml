@@ -38,7 +38,7 @@
         - IOUT?
         - IOUT?
   set:
-    - "VSET:"
+    - "VSET:{0}"
   end:  
     - OUT:0
     - LOCK:0
@@ -51,6 +51,6 @@
     voltage:
         - READ?
   set:
-    - "SET "
+    - "SET {0}"
   end:
     - POWER OFF
