@@ -11,12 +11,12 @@ namespace fs = std::filesystem;
 class SetValueParser {
 private:
 	fs::path m_path;
-	std::vector<Meter::SetValue> m_values;
+	SetArguments m_setArgs;
 
 public:
 	SetValueParser(const std::string& path)
 		: m_path(path)
-		, m_values{}
+		, m_setArgs{}
 	{
 		if (m_path.empty())
 			return;
@@ -25,12 +25,12 @@ public:
 		std::string line;
 		while (std::getline(setDataFile, line)) {
 			auto splitLine = utils::split(line);
-			auto time = chrono::duration<double>(ustring::parse<double>(splitLine.at(0)));
+			auto time = ustring::parse<double>(splitLine.at(0));
 			std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
-			m_values.emplace_back(time, args);
+			m_setArgs.append({ time, args });
 		}
 	}
-	std::vector<Meter::SetValue> get() const {
-		return m_values;
+	SetArguments get() const {
+		return m_setArgs;
 	}
 };

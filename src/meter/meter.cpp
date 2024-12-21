@@ -2,11 +2,14 @@
 
 #include <exception>
 
-Meter::Meter(const std::string& name, const std::string& port, const std::vector<SetValue>& setData, const Commands& cmd)
+#include <xtd/ustring.h>
+
+using xtd::ustring;
+
+Meter::Meter(const std::string& name, const std::string& port, const SetArguments& setArgs, const Commands& cmd)
 	: m_name{ name }
 	, m_conn{ Connection::openAuto(port) }
-	, m_setData{ setData }
-	, m_currSetIdx{ 0 }
+	, m_setArgs{ setArgs }
 	, m_cmd{ cmd }
 	, m_values{}
 	, m_averageResponseTime{ 0 }
@@ -19,8 +22,8 @@ Meter::Meter(const std::string& name, const std::string& port, const std::vector
 		m_values[title] = "0";
 	lg::debug("{} meter configs:\n"
 		"  - port: {}\n"
-		"  - setData size: {}\n",
-		m_name, port, setData.size()
+		"  - setArgs size: {}\n",
+		m_name, port, setArgs.size()
 	);
 
 	lg::debug("Connect to {}...", m_name);
@@ -50,13 +53,32 @@ std::vector<std::string> Meter::readTitles() const {
 
 void Meter::setCurrentData() {
 	std::lock_guard lg{ m_mu };
-	lg::debug("{} trying to set data...", m_name);
 	for (const auto& cmd : m_cmd.set) {
-		auto argCmd = cmd + currentSetValue().args.at(0);
-		m_conn->write(argCmd);
-		lg::debug("Set command: '{}'", argCmd);
+		auto setCmd = cmd;
+		bool parseSuccess = true;
+		auto openBrace = setCmd.find_first_of('{');
+		while (openBrace != std::string::npos) {
+			auto closeBrace = setCmd.find_first_of('}');
+			if (closeBrace == std::string::npos) {
+				lg::warn("{}: Invalid set cmd! {}", m_name, cmd);
+				parseSuccess = false;
+				break;
+			}
+			auto argIdx = ustring::parse<size_t>(setCmd.substr(openBrace + 1, closeBrace - openBrace - 1));
+			if (argIdx >= m_setArgs.argsCount()) {
+				lg::warn("{}: Too large idx in set cmd! {}", m_name, cmd);
+				parseSuccess = false;
+				break;
+			}
+			setCmd = setCmd.substr(0, openBrace) + m_setArgs.currentArgs().at(argIdx) + setCmd.substr(closeBrace + 1);
+			openBrace = setCmd.find_first_of('{');
+		}
+		if (parseSuccess) {
+			lg::debug("{} set command: {}", m_name, setCmd);
+			m_conn->write(setCmd);
+		}
 	}
-	++m_currSetIdx;
+	m_setArgs.next();
 }
 
 void Meter::readUntil(const chrono::steady_clock::time_point& time_point) {

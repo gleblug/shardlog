@@ -43,21 +43,13 @@ private:
 	bool enough() {
 		if (m_stop.test())
 			return true;
-		
-		size_t needCount = 0;
-		for (const auto& meter : m_meters)
-			needCount += static_cast<size_t>(meter->needToSet());
-		return (needCount == 0);
 	}
 
 	void setMetersValue() {
 		std::vector<std::thread> threads;
 		for (const auto& meter : m_meters) {
-			if (meter->needToSet() &&
-				meter->currentSetValue().timePoint <= (chrono::steady_clock::now() - m_start)
-				) {
+			if (meter->needToSet(m_start))
 				threads.emplace_back([&meter]() { meter->setCurrentData(); });
-			}
 		}
 		for (auto& th : threads)
 			th.join();
