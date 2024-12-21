@@ -42,3 +42,15 @@
   end:  
     - OUT:0
     - LOCK:0
+
+- name: bertan225_arduino
+  configure:
+    - CONF 5000
+    - POWER ON
+  read:
+    voltage:
+        - READ?
+  set:
+    - "SET "
+  end:
+    - POWER OFF
