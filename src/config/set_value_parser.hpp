@@ -25,6 +25,8 @@ public:
 		std::string line;
 		while (std::getline(setDataFile, line)) {
 			auto splitLine = utils::split(line);
+			if (splitLine.size() < 2)
+				continue;
 			auto time = ustring::parse<double>(splitLine.at(0));
 			std::vector<std::string> args(std::next(splitLine.cbegin()), splitLine.cend());
 			m_setArgs.append({ time, args });

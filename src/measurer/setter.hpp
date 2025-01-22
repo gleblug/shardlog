@@ -27,7 +27,7 @@ public:
 	void start() {
 		m_start = chrono::steady_clock::now();
 		m_thread = std::thread([this] {
-			while (!enough()) {
+			while (!m_stop.test()) {
 				setMetersValue();
 				std::this_thread::sleep_for(m_timeout);
 			}
@@ -40,11 +40,6 @@ public:
 	}
 
 private:
-	bool enough() {
-		if (m_stop.test())
-			return true;
-	}
-
 	void setMetersValue() {
 		std::vector<std::thread> threads;
 		for (const auto& meter : m_meters) {
