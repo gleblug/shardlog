@@ -7,12 +7,12 @@ namespace lg = spdlog;
 using xtd::console;
 
 auto main() -> int {
+	Application app{};
 #if DEBUG
 	lg::set_level(lg::level::debug);
+	app.run();
 #else
-	lg::set_level(lg::level::warn);
-#endif
-	Application app{};
+	lg::set_level(lg::level::info);
 	try {
 		app.run();
 	}
@@ -20,4 +20,6 @@ auto main() -> int {
 		lg::critical("Unhandled exception: {}", e.what());
 		console::read_key();
 	}
+#endif
+
 }
