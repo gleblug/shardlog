@@ -1,10 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "dependencies": [
-    "better-enums",
+    "boost-asio",
+    "ftxui",
     "pulzed-mini",
     "spdlog",
-    "yaml-cpp",
-    "cserialport"
+    "yaml-cpp"
   ]
 }

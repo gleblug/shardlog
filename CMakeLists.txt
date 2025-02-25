@@ -1,42 +1,34 @@
 cmake_minimum_required(VERSION 3.20)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
-project(shardlog)
-
-find_package(xtd REQUIRED)
-add_references(xtd.core)
-add_packages(spdlog)
-add_references(spdlog::spdlog_header_only)
-add_packages(yaml-cpp)
-add_references(yaml-cpp::yaml-cpp)
-
-add_library(CSerialPort STATIC IMPORTED)
-set_target_properties(CSerialPort PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/vcpkg_installed/$ENV{VCPKG_DEFAULT_TRIPLET}/lib/libcserialport.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/vcpkg_installed/$ENV{VCPKG_DEFAULT_TRIPLET}/include/CSerialPort"
-)
-add_references(CSerialPort)
-
-add_library(nivisa STATIC IMPORTED)
-set_target_properties(nivisa PROPERTIES
-    IMPORTED_LOCATION "C:/Program Files/IVI Foundation/VISA/Win64/Lib_x64/msc/nivisa64.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files/IVI Foundation/VISA/Win64/Include"
-)
-add_references(nivisa)
-
+project(shardlog LANGUAGES CXX VERSION 1.0.0)
 
 set(target_sources
     main.cpp
-    application.cpp
-    measurer/measurer.cpp
-    config/config_parser.cpp
-    meter/meter.cpp
-    meter/connection/connection.cpp
-    meter/connection/comport.cpp
-    meter/connection/nivisa.cpp
+    hardware/serial/ListSerial.cpp
+    # application.cpp
+    # measurer/measurer.cpp
+    # config/config_parser.cpp
+    # meter/meter.cpp
+    # meter/connection/connection.cpp
+    # meter/connection/comport.cpp
+    # meter/connection/nivisa.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
-
-add_sources(${target_sources})
 add_compile_definitions("DEBUG=$<CONFIG:Debug>")
-target_type(CONSOLE_APPLICATION)
+add_executable(${PROJECT_NAME} ${target_sources})
+
+find_package(boost_asio CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Boost::asio)
+
+find_package(ftxui CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE ftxui::dom ftxui::screen ftxui::component)
+
+find_package(spdlog REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
+
+find_package(yaml-cpp CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp::yaml-cpp)
+
+find_path(PULZED_MINI_INCLUDE_DIRS "mini/ini.h")
+target_include_directories(${PROJECT_NAME} PRIVATE ${PULZED_MINI_INCLUDE_DIRS})

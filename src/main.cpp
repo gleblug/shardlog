@@ -1,25 +1,13 @@
 #include <spdlog/spdlog.h>
-#include <xtd/console.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
-#include "application.hpp"
+#include "hardware/serial/ListSerial.hpp"
 
 namespace lg = spdlog;
-using xtd::console;
 
 auto main() -> int {
-	Application app{};
-#if DEBUG
+	lg::set_default_logger(lg::basic_logger_mt("basic_logger", "logs/shardlog.log"));
 	lg::set_level(lg::level::debug);
-	app.run();
-#else
-	lg::set_level(lg::level::info);
-	try {
-		app.run();
-	}
-	catch (const std::exception& e) {
-		lg::critical("Unhandled exception: {}", e.what());
-		console::read_key();
-	}
-#endif
-
+	lg::debug("Hello, shardlog!");
+	lg::debug("Ports: {}", ListSerial::all_ports().at(0));
 }
