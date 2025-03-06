@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 project(shardlog LANGUAGES CXX VERSION 1.0.0)
 
 set(target_sources
     main.cpp
-    hardware/serial/ListSerial.cpp
+    application.cpp
+    frontend/console_frontend.cpp
+    # hardware/serial/ListSerial.cpp
     # application.cpp
     # measurer/measurer.cpp
     # config/config_parser.cpp
@@ -16,6 +18,7 @@ set(target_sources
 )
 list(TRANSFORM target_sources PREPEND "src/")
 add_compile_definitions("DEBUG=$<CONFIG:Debug>")
+add_compile_definitions("PROJECT_NAME=\"${PROJECT_NAME}\"")
 add_executable(${PROJECT_NAME} ${target_sources})
 
 find_package(boost_asio CONFIG REQUIRED)
