@@ -1,7 +1,6 @@
-.vs/
-build/
-install/
-bin/
+.vs*
+logs
+out
 
 # Prerequisites
 *.d
