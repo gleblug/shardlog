@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(shardlog LANGUAGES CXX VERSION 1.0.0)
 
+add_compile_definitions("DEBUG=$<CONFIG:Debug>")
+add_compile_definitions("PROJECT_NAME=\"${PROJECT_NAME}\"")
+
+include_directories(src)
 set(target_sources
     main.cpp
     application.cpp
     frontend/console_frontend.cpp
+    frontend/components/devices_status.cpp
+    connection/serial.cpp
+    connection/connection_manager.cpp
+    config/config_parser.cpp
     # hardware/serial/ListSerial.cpp
     # application.cpp
     # measurer/measurer.cpp
@@ -17,8 +26,7 @@ set(target_sources
     # meter/connection/nivisa.cpp
 )
 list(TRANSFORM target_sources PREPEND "src/")
-add_compile_definitions("DEBUG=$<CONFIG:Debug>")
-add_compile_definitions("PROJECT_NAME=\"${PROJECT_NAME}\"")
+
 add_executable(${PROJECT_NAME} ${target_sources})
 
 find_package(boost_asio CONFIG REQUIRED)

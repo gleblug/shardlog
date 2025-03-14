@@ -14,7 +14,7 @@
             "hidden": true,
             "inherits": "common",
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
             },
             "architecture": {
                 "value": "arm64",

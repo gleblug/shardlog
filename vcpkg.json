@@ -3,7 +3,6 @@
   "dependencies": [
     "boost-asio",
     "ftxui",
-    "pulzed-mini",
     "spdlog",
     "yaml-cpp"
   ]
