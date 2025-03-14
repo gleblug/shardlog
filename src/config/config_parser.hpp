@@ -1,29 +1,25 @@
 #pragma once
 
+#include <string>
+#include <vector>
+#include <unordered_map>
 #include <filesystem>
 
-#include <mini/ini.h>
-#include <xtd/ustring.h>
-
-#include "../meter/meter.hpp"
-#include "../measurer/measurer.hpp"
-
-namespace ini = mINI;
 namespace fs = std::filesystem;
 
-class ConfigParser : private ini::INIStructure {
-private:
-	fs::path m_path;
-	const std::string measurerSection = "measurer";
-	const std::string meterSection = "meter";
+struct Config {
+    std::string name;
+    std::unordered_map<std::string, std::string> properties;
+};
 
+class ConfigParser {
 public:
-	explicit ConfigParser(const std::string& configPath);
-	Measurer::Config measurer();
-	Meter::Config meter(const std::string& name);
+    static std::vector<std::string> measurementNames();
+    static std::vector<std::string> schemeNames();
 
 private:
-	void createFile();
-	void parse();
-	void save();
+    static std::vector<std::string> dictNames(fs::path path);
+    
+    static std::pair<std::string, std::string> exampleScheme;
+    static std::pair<std::string, std::string> exampleMeasurement;
 };

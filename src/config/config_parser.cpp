@@ -1,70 +1,99 @@
 #include "config_parser.hpp"
 
-#include <exception>
 #include <fstream>
-
-#include <xtd/ustring.h>
+#include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
 
-#include "../utils/string.hpp"
-
 namespace lg = spdlog;
-using xtd::ustring;
 
-ConfigParser::ConfigParser(const std::string& configPath)
-	: m_path{ configPath }
+std::vector<std::string> ConfigParser::measurementNames() {
+    auto path = fs::current_path() / "measurements";
+    if (!fs::exists(path)) {
+        lg::warn("Measurement configs not exists at {}", path.string());
+        fs::create_directory(path);
+        std::ofstream(path / exampleMeasurement.first) << exampleMeasurement.second;
+        lg::warn("Created example measurement config");
+        return {};
+    }
+    return dictNames(path);
+}
+
+std::vector<std::string> ConfigParser::schemeNames() {
+    auto path = fs::current_path() / "schemes";
+    if (!fs::exists(path)) {
+        lg::warn("Scheme configs not exists at {}", path.string());
+        fs::create_directory(path);
+        std::ofstream(path / exampleScheme.first) << exampleScheme.second;
+        return {};
+    }
+    return dictNames(path);
+}
+
+std::vector<std::string> ConfigParser::dictNames(fs::path path)
 {
-	lg::info("Load config from '{}'...", m_path.string());
-	if (!fs::exists(m_path)) {
-		lg::warn("Can't find '{}'. Creating a new one from template...", m_path.string());
-		createFile();
-	}
-	parse();
+    lg::debug("Loading dict files from directory {}", path.string());
+    
+    if (!fs::exists(path)) {
+        lg::info("{} not exists, creating it...", path.string());
+        fs::create_directory(path);
+        return {};
+    }
+
+    std::vector<std::string> res;
+    for (const auto & entry : fs::directory_iterator(path)) {
+        auto config = YAML::LoadFile(entry.path());
+        lg::debug("Loading dict names from {}", entry.path().string());
+        for (auto it = config.begin(); it != config.end(); ++it) {
+            if (it->second["hidden"] && it->second["hidden"].as<bool>()) {
+                continue;
+            }
+            auto filename = entry.path().filename();;
+            auto name = filename.stem().string() + "." + it->first.as<std::string>();
+            res.push_back(name);
+            lg::debug("Loaded dict name {}", name);
+        }
+    }
+    return res;
 }
 
-void ConfigParser::createFile() {
-	lg::debug("Create '{}' config file...", m_path.string());
-	std::ofstream(m_path, std::ios::out);
+std::pair<std::string, std::string> ConfigParser::exampleMeasurement = {
+    "example_experiment.yaml",
+    R"(# avoid dots in filename
+current_measurements:
+  duration: 600
+  timeout: 1
+  status_timeout: 60
+  receivers:
+    - type: DIRECTORY
+      name: example_measurements
+      send: DATA
+    - type: TELEGRAM
+      name: gleblug
+      send: STATUS
+  devices:
+    - name: my example meter
+      port: /dev/ttyUSB0
+      scheme: example_meter.current_scheme
+)"};
 
-	(*this)[measurerSection].set({
-		{"timeout", "0"},
-		{"directory", "./data"}
-		});
-	save();
-	// TODO : create valid example
-}
-
-Measurer::Config ConfigParser::measurer() {
-	if (!has(measurerSection))
-		throw std::runtime_error("There is no measurer section in config file!");
-	auto section = get(measurerSection);
-	return {
-		utils::split(section.get("meters")),
-		section.get("directory"),
-		Measurer::TimeDuration(ustring::parse<double>(section.get("duration"))),
-		Measurer::TimeDuration(ustring::parse<double>(section.get("timeout"))),
-	};
-}
-
-Meter::Config ConfigParser::meter(const std::string &name) {
-	auto sname = std::format("{}.{}", meterSection, name);
-	if (!has(sname))
-		throw std::runtime_error(std::format("Invalid meter name '{}' in measurer config!", sname));
-	auto section = get(sname);
-
-	return {
-		section.get("commands"),
-		section.get("port"),
-		section.get("setValues")
-	};
-}
-
-void ConfigParser::parse() {
-	lg::debug("Parsing '{}' config file...", m_path.string());
-	ini::INIFile(m_path.string()).read(*this);
-}
-
-void ConfigParser::save() {
-	lg::debug("Saving '{}' config file...", m_path.string());
-	ini::INIFile(m_path.string()).write(*this, true);
-}
+std::pair<std::string, std::string> ConfigParser::exampleScheme = {
+    "example_meter.yaml", 
+    R"(# avoid dots in filename
+current_scheme:
+  read_write_delay: 0.5
+  timeout: 1
+  commands:
+    init:
+      - CONFIGURE_TO_DC_CURRENT
+    read:
+      status:
+        - READ_STATUS_COMMANDS
+      current:
+        - READ_CURRENT_COMMANDS
+    write:
+      from: schemes/current_data.csv
+      current:
+        - SET_CURRENT_COMMANDS {0}
+    end:
+      - END_COMMANDS
+)"};

@@ -5,7 +5,7 @@
 
 namespace lg = spdlog;
 
-auto main(int argc, char* argv[]) -> int {
+int main(int argc, char* argv[]) {
 	const auto log_name = PROJECT_NAME;
 	const auto log_file = "logs/shardlog.log";
 	#if DEBUG
@@ -15,8 +15,8 @@ auto main(int argc, char* argv[]) -> int {
 	#endif
 
 	try {
-		lg::set_default_logger(lg::basic_logger_mt("shardlog", log_file));
-		lg::set_level(lg::level::debug);
+		lg::set_default_logger(lg::basic_logger_mt(log_name, log_file));
+		lg::set_level(log_level);
 
 		Application app;
 		app.run();
