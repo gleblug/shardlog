@@ -25,12 +25,12 @@ private:
 	// void stopMeasurement();
 
 	DataBus dataBus_;
-	CommandBus commandBus_;
 	ConnectionBus connectionBus_;
+	CommandBus commandBus_;
 
 	DeviceManager deviceManager_;
-	std::unordered_map<std::string, std::shared_ptr<IReceiver>> receivers_;
 	ConnectionManager connectionManager_;
+	std::unordered_map<std::string, std::shared_ptr<IReceiver>> receivers_;
 
 	ConsoleFrontend frontend_;
 };

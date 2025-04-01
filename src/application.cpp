@@ -5,10 +5,11 @@ namespace lg = spdlog;
 
 Application::Application()
 	: dataBus_{std::make_shared<EventBus<DataEvent>>()}
-	, commandBus_{std::make_shared<EventBus<CommandEvent>>()}
 	, connectionBus_{std::make_shared<EventBus<ConnectionEvent>>()}
-	, frontend_(commandBus_)
+	, commandBus_{std::make_shared<EventBus<CommandEvent>>()}
+	, deviceManager_(dataBus_)
 	, connectionManager_(connectionBus_)
+	, frontend_(commandBus_)
 {}
 
 void Application::run() {

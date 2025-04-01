@@ -35,7 +35,7 @@ void ConsoleFrontend::run() {
     auto tabMenu = cc::NamedMenu("Menu", tabValues, tabSelected, {{tabValues.size() - 1, [&]{ quitModalShown = true; }}});
     auto tabContainer = Container::Tab({
         Measurements(),
-        Devices(),
+        Connections(),
     }, &tabSelected);
 
     int menu_size = 24;
@@ -85,7 +85,7 @@ Component ConsoleFrontend::Measurements() {
     return Container::Vertical(buttons);
 }
 
-Component ConsoleFrontend::Devices() {
+Component ConsoleFrontend::Connections() {
     return Renderer([this]{
         Elements ports;
         for (const auto& [port, status] : portsStatus_) {

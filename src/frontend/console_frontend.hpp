@@ -25,5 +25,5 @@ private:
     std::unordered_map<std::string, ConnectionEvent::Type> portsStatus_;
 
     Component Measurements();
-    Component Devices();
+    Component Connections();
 };
