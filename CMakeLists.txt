@@ -15,7 +15,7 @@ set(target_sources
     frontend/components/devices_status.cpp
     connection/serial.cpp
     connection/connection_manager.cpp
-    config/config_parser.cpp
+    # config/config_parser.cpp
     # hardware/serial/ListSerial.cpp
     # application.cpp
     # measurer/measurer.cpp

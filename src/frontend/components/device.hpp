@@ -1,7 +1,5 @@
 #pragma once
 
-#include "config/config_parser.hpp"
-
 #include <ftxui/component/component.hpp>
 
 using namespace ftxui;

@@ -24,6 +24,7 @@ std::vector<std::string> ConfigParser::schemeNames() {
         lg::warn("Scheme configs not exists at {}", path.string());
         fs::create_directory(path);
         std::ofstream(path / exampleScheme.first) << exampleScheme.second;
+        lg::warn("Created example scheme config");
         return {};
     }
     return dictNames(path);
@@ -56,44 +57,4 @@ std::vector<std::string> ConfigParser::dictNames(fs::path path)
     return res;
 }
 
-std::pair<std::string, std::string> ConfigParser::exampleMeasurement = {
-    "example_experiment.yaml",
-    R"(# avoid dots in filename
-current_measurements:
-  duration: 600
-  timeout: 1
-  status_timeout: 60
-  receivers:
-    - type: DIRECTORY
-      name: example_measurements
-      send: DATA
-    - type: TELEGRAM
-      name: gleblug
-      send: STATUS
-  devices:
-    - name: my example meter
-      port: /dev/ttyUSB0
-      scheme: example_meter.current_scheme
-)"};
 
-std::pair<std::string, std::string> ConfigParser::exampleScheme = {
-    "example_meter.yaml", 
-    R"(# avoid dots in filename
-current_scheme:
-  read_write_delay: 0.5
-  timeout: 1
-  commands:
-    init:
-      - CONFIGURE_TO_DC_CURRENT
-    read:
-      status:
-        - READ_STATUS_COMMANDS
-      current:
-        - READ_CURRENT_COMMANDS
-    write:
-      from: schemes/current_data.csv
-      current:
-        - SET_CURRENT_COMMANDS {0}
-    end:
-      - END_COMMANDS
-)"};

@@ -4,6 +4,7 @@
     "boost-asio",
     "ftxui",
     "spdlog",
-    "yaml-cpp"
+    "yaml-cpp",
+    "boost-algorithm"
   ]
 }

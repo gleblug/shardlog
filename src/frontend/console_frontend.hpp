@@ -25,8 +25,9 @@ private:
     std::shared_ptr<EventBus<CommandEvent>> commandBus_;
 
     ScreenInteractive screen_;
-
     DevicesStatus devicesStatus_;
+
+    int measurementState_;
     // void devicesStatus();
 
     // Component startExperiment();

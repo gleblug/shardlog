@@ -3,12 +3,12 @@
 #include "components/modal.hpp"
 #include "components/measurement.hpp"
 #include "components/device.hpp"
+#include "components/menu.hpp"
 
 #include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/component/component_options.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/component/component.hpp>
-#include "ftxui/component/loop.hpp"
 #include <spdlog/spdlog.h>
 
 #include <iostream>
@@ -22,34 +22,22 @@ ConsoleFrontend::ConsoleFrontend(std::shared_ptr<EventBus<CommandEvent>> command
     : commandBus_{commandBus}
     , screen_{ScreenInteractive::Fullscreen()}
     , devicesStatus_{}
+    , measurementState_{0}
 {}
 
 void ConsoleFrontend::run() {
     bool quitModalShown = false;
     auto modalQuit = ModalConfirmation(screen_.ExitLoopClosure(), [&]{ quitModalShown = false; });
 
-    std::vector<std::string> tabValues = {"Measurement", "Devices status", "Edit configs", "Extensions", "Quit"};
+    std::vector<std::string> tabValues = {"Measurement", "Devices", "Quit"};
     int tabSelected = 0;
-    MenuOption tabOption;
-    tabOption.on_change = [&]{
-        if (tabSelected == tabValues.size() - 1) {
-            quitModalShown = true;
-        }
-    };
-    tabOption.entries_option.transform = [](EntryState state) -> Element {
-        state.label = (state.active ? "> " : "  ") + state.label;
-        Element e = text(state.label) | border | size(HEIGHT, EQUAL, 3);
-        if (state.active)
-            e = e | bold;
-        return e;
-    };
-    auto tabMenu = Menu(&tabValues, &tabSelected, tabOption);
-    auto tabContainer = Container::Tab(
-        {
-            MeasurementList(),
-        },
-        &tabSelected
-    );
+    auto tabMenu = NamedMenu("Menu", tabValues, tabSelected, {{tabValues.size() - 1, [&]{ quitModalShown = true; }}});
+    auto tabContainer = Container::Tab({
+        Container::Tab({
+            // NamedMenu("Experiments", ConfigParser::measurementNames())
+        }, &measurementState_),
+        devicesStatus_.componentConnected()
+    }, &tabSelected);
 
     int menu_size = 24;
     auto resizable = ResizableSplitLeft(
