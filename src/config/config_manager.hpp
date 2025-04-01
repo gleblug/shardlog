@@ -70,7 +70,7 @@ current_measurements:
       send: STATUS
   devices:
     - name: example_meter
-      scheme: example_meter.current_scheme
+      scheme: current_scheme
       port: /dev/ttyUSB0
       boud_rate: 9600
 )"};
@@ -79,8 +79,8 @@ current_measurements:
         "example_meter.yaml", 
         R"(# avoid dots in filename
 current_scheme:
-  read_write_delay: 0.5
   read_timeout: 1
+  read_write_delay: 0.5
   write_from: schemes/current_data.csv
   commands:
     init:
@@ -257,16 +257,16 @@ public:
         return getMeasurementConfig(experimentName, measurementName)["timeout"].as<double>();
     }
     
-    [[nodiscard]] double getStatusTimeout(const std::string& experimentName, const std::string& measurementName) const {
+    [[nodiscard]] double getExperimentStatusTimeout(const std::string& experimentName, const std::string& measurementName) const {
         return getMeasurementConfig(experimentName, measurementName)["status_timeout"].as<double>();
-    }
-    
-    [[nodiscard]] double getSchemeReadWriteDelay(const std::string& deviceName, const std::string& schemeName) const {
-        return getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>();
     }
     
     [[nodiscard]] double getSchemeReadTimeout(const std::string& deviceName, const std::string& schemeName) const {
         return getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>();
+    }
+    
+    [[nodiscard]] double getSchemeReadWriteDelay(const std::string& deviceName, const std::string& schemeName) const {
+        return getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>();
     }
 
     [[nodiscard]] std::string getSchemeWriteSource(const std::string& deviceName, const std::string& schemeName) const {
@@ -299,3 +299,6 @@ public:
         return commands;
     }
 };
+
+using DeviceInfo = ConfigManager::DeviceInfo;
+using CommandList = ConfigManager::CommandList;

@@ -1,9 +1,22 @@
 #pragma once
 
-class IDevice {
+#include "config/config_manager.hpp"
+
+class Device {
 public:
-    virtual ~IDevice() = default;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual void configure(const std::unordered_map<std::string, std::string> &params) {};
+    Device(const DeviceInfo& info);
+
+private:
+    std::string name_;
+    std::string port_;
+    unsigned int boudRate_;
+
+    double readTimeout_;
+    double readWriteDelay_;
+    std::string writeSource_;
+    
+    CommandList initCommands_;
+    std::map<std::string, CommandList> readCommands_;
+    std::map<std::string, CommandList> writeCommands_;
+    CommandList endCommands_;
 };

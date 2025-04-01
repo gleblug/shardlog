@@ -14,6 +14,8 @@ set(target_sources
     frontend/console_frontend.cpp
     connection/serial.cpp
     connection/connection_manager.cpp
+    devices/device_manager.cpp
+    devices/device.cpp
     # config/config_parser.cpp
     # hardware/serial/ListSerial.cpp
     # application.cpp
