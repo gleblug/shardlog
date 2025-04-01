@@ -12,7 +12,6 @@ set(target_sources
     main.cpp
     application.cpp
     frontend/console_frontend.cpp
-    frontend/components/devices_status.cpp
     connection/serial.cpp
     connection/connection_manager.cpp
     # config/config_parser.cpp
