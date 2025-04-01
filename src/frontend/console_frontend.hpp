@@ -6,8 +6,6 @@
 #include "events/connection_event.hpp"
 #include "events/command_event.hpp"
 
-#include "components/devices_status.hpp"
-
 using namespace ftxui;
 
 struct ToggledComponent {
@@ -17,19 +15,12 @@ struct ToggledComponent {
 
 class ConsoleFrontend {
 public:
-    ConsoleFrontend(std::shared_ptr<EventBus<CommandEvent>> commandBus);
+    ConsoleFrontend(CommandBus commandBus);
     void run();
-    void handleConnection(const ConnectionEvent& event);
+    // void handleConnection(const ConnectionEvent& event);
     
 private:
-    std::shared_ptr<EventBus<CommandEvent>> commandBus_;
+    CommandBus commandBus_;
 
     ScreenInteractive screen_;
-    DevicesStatus devicesStatus_;
-
-    int measurementState_;
-    // void devicesStatus();
-
-    // Component startExperiment();
-    // MenuData startExperiment_;
 };

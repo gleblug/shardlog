@@ -24,9 +24,9 @@ private:
 	// void startMeasurement();
 	// void stopMeasurement();
 
-	std::shared_ptr<EventBus<DataEvent>> dataBus_;
-	std::shared_ptr<EventBus<CommandEvent>> commandBus_;
-	std::shared_ptr<EventBus<ConnectionEvent>> connectionBus_;
+	DataBus dataBus_;
+	CommandBus commandBus_;
+	ConnectionBus connectionBus_;
 
 	DeviceManager deviceManager_;
 	std::unordered_map<std::string, std::shared_ptr<IReceiver>> receivers_;

@@ -17,8 +17,8 @@ void Application::run() {
 	commandBus_->subscribe("app_command_handler", [this](const CommandEvent& event) {
 		handleCommand(event);
 	});
-	connectionBus_->subscribe("frontend_connection_handler", [this](const ConnectionEvent& event) {
-		frontend_.handleConnection(event);
+	connectionBus_->subscribe("device_manager_connection_handler", [this](const ConnectionEvent& event) {
+		// deviceManager_.handleConnection(event);
 	});
 	dataBus_->subscribe("receivers_data_handler", [this](const DataEvent& event) {
 		for (auto& [name, receiver_ptr] : receivers_) {
@@ -26,11 +26,12 @@ void Application::run() {
 		}
 	});
 
+	// deviceManager_.start();
 	connectionManager_.start();
 	frontend_.run();
 
 	dataBus_->unsubscribe("receivers_data_handler");
-	connectionBus_->unsubscribe("frontend_connection_handler");
+	connectionBus_->unsubscribe("device_manager_connection_handler");
 	commandBus_->unsubscribe("app_command_handler");
 
 	lg::info("Application stopped");

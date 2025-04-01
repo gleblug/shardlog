@@ -7,7 +7,7 @@
 using namespace std::chrono_literals;
 namespace lg = spdlog;
 
-ConnectionManager::ConnectionManager(std::shared_ptr<EventBus<ConnectionEvent>> connectionBus)
+ConnectionManager::ConnectionManager(ConnectionBus connectionBus)
     : connectionBus_(connectionBus)
     , running_(false)
 {}

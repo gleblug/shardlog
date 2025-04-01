@@ -11,7 +11,7 @@
 
 class ConnectionManager {
 public:
-    explicit ConnectionManager(std::shared_ptr<EventBus<ConnectionEvent>> connectionBus);
+    explicit ConnectionManager(ConnectionBus connectionBus);
     ~ConnectionManager();
 
     void start();
@@ -21,7 +21,7 @@ public:
 private:
     void run();
 
-    std::shared_ptr<EventBus<ConnectionEvent>> connectionBus_;
+    ConnectionBus connectionBus_;
     std::atomic<bool> running_;
     std::thread thread_;
     std::unordered_set<std::string> connected_;
