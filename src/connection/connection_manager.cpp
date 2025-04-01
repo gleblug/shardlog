@@ -43,8 +43,9 @@ void ConnectionManager::run() {
         std::this_thread::sleep_for(1s);
 
         const auto serialPorts = Serial::allPorts();
+        std::unordered_set<std::string> oldConnected(connected_);
         std::unordered_set<std::string> newConnected(serialPorts.begin(), serialPorts.end());
-        if (connected_ == newConnected) {
+        if (oldConnected == newConnected) {
             continue;
         }
 
@@ -59,7 +60,7 @@ void ConnectionManager::run() {
             }
         }
 
-        for (const auto& port : connected_) {
+        for (const auto& port : oldConnected) {
             if (!newConnected.contains(port)) {
                 connected_.erase(port);
                 connectionBus_->publish(ConnectionEvent{

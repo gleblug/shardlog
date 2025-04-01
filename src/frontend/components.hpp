@@ -9,6 +9,9 @@
 #include "ftxui/component/screen_interactive.hpp"  // for ScreenInteractive, Component
 #include "ftxui/dom/elements.hpp"  // for operator|, separator, text, size, Element, vbox, border, GREATER_THAN, WIDTH, center, HEIGHT
 
+#include "events/connection_event.hpp"
+#include "config/config_manager.hpp"
+
 using namespace ftxui;
 
 namespace cc {
