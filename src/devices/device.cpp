@@ -1,11 +1,14 @@
 #include "device.hpp"
 
 #include <spdlog/spdlog.h>
+#include <cmath>
 
 namespace lg = spdlog;
+using namespace std::chrono_literals;
 
 Device::Device(const DeviceInfo& info)
-    : stopRequested_{false}
+    : reconnectRequested_{false}
+    , stopRequested_{false}
     , measuring_{false}
     , measurementRequested_{false}
     , name_{info.name} 
@@ -13,8 +16,8 @@ Device::Device(const DeviceInfo& info)
     , boudRate_{info.boudRate}
 {
     const auto& config = ConfigManager::getInstance();
-    readTimeout_ = chrono::duration<double>(config.getSchemeReadTimeout(info.name, info.scheme));
-    readWriteDelay_ = chrono::duration<double>(config.getSchemeReadWriteDelay(info.name, info.scheme));
+    readTimeout_ = chrono::milliseconds(config.getSchemeReadTimeoutMs(info.name, info.scheme));
+    readWriteDelay_ = chrono::milliseconds(config.getSchemeReadWriteDelayMs(info.name, info.scheme));
     writeSource_ = config.getSchemeWriteSource(info.name, info.scheme);
     initCommands_ = config.getInitCommands(info.name, info.scheme);
     readCommands_ = config.getReadCommands(info.name, info.scheme);
@@ -25,10 +28,13 @@ Device::Device(const DeviceInfo& info)
         "Device created. Name: '{}', port: '{}', boud_rate: '{}', read_timeout: '{}', read_write_delay: '{}', write_source: '{}', read_commands[0] name: '{}', read_commands[0] command[0]: '{}'",
         name_, port_, boudRate_, readTimeout_.count(), readWriteDelay_.count(), writeSource_, readCommands_[0].first, readCommands_[0].second[0]
     );
-
-    // serial.open(port, 9600);
-    // serial.setTimeout(boost::posix_time::seconds(1));
-
+    
+    try {
+        connection_ = std::make_unique<Serial>(port_, boudRate_);
+    } catch (const boost::system::system_error& e) {
+        lg::error("Failed to open serial port '{}': '{}'", port_, e.what());
+    }
+    connection_->setTimeout(boost::posix_time::milliseconds(readTimeout_.count()));
     measurementThread_ = std::thread(&Device::measurementThread, this);
 }
 
@@ -92,6 +98,7 @@ void Device::measurementThread() {
             }
             catch (const boost::system::system_error&) {
                 result = MeasurementResult{MeasurementStatus::DISCONNECTED, {}};
+                reconnect();
                 break;
             }
             result.values.emplace_back(title, value);
@@ -102,6 +109,27 @@ void Device::measurementThread() {
             result_ = result;
         }
     }
+}
+
+void Device::reconnect() {
+    if (reconnectRequested_) return;
+    reconnectRequested_ = true;
+
+    if (connectionThread_.joinable()) {
+        connectionThread_.join();
+    }
+    connectionThread_ = std::thread([this] {
+        while (true) {
+            try {
+                connection_->open(port_, boudRate_);
+                break;
+            }
+            catch (const boost::system::system_error&) {
+                std::this_thread::sleep_for(2s);
+            }
+        }
+        lg::info("Serial port '{}' reconnected", port_);
+    });
 }
 
 // void Device::open() {

@@ -34,8 +34,12 @@ public:
 
 private:
     void measurementThread();
+    void reconnect();
 
     std::unique_ptr<Serial> connection_;
+
+    std::thread connectionThread_;
+    std::atomic_bool reconnectRequested_;
 
     std::thread measurementThread_;
     std::atomic_bool stopRequested_;
@@ -50,8 +54,8 @@ private:
     std::string port_;
     unsigned int boudRate_;
 
-    chrono::duration<double> readTimeout_;
-    chrono::duration<double> readWriteDelay_;
+    chrono::milliseconds readTimeout_;
+    chrono::milliseconds readWriteDelay_;
     std::string writeSource_;
 
     CommandList initCommands_;

@@ -12,6 +12,7 @@
 #include <unordered_set>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
+#include <cmath>
 
 namespace lg = spdlog;
 namespace fs = std::filesystem;
@@ -264,12 +265,12 @@ public:
         return getMeasurementConfig(experimentName, measurementName)["status_timeout"].as<double>();
     }
     
-    [[nodiscard]] double getSchemeReadTimeout(const std::string& deviceName, const std::string& schemeName) const {
-        return getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>();
+    [[nodiscard]] unsigned long getSchemeReadTimeoutMs(const std::string& deviceName, const std::string& schemeName) const {
+        return std::lround(getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>() * 1000.0);
     }
     
-    [[nodiscard]] double getSchemeReadWriteDelay(const std::string& deviceName, const std::string& schemeName) const {
-        return getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>();
+    [[nodiscard]] unsigned long getSchemeReadWriteDelayMs(const std::string& deviceName, const std::string& schemeName) const {
+        return std::lround(getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>() * 1000.0);
     }
 
     [[nodiscard]] std::string getSchemeWriteSource(const std::string& deviceName, const std::string& schemeName) const {
