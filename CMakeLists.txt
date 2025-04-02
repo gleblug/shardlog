@@ -41,6 +41,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
 
 find_package(yaml-cpp CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp::yaml-cpp)
-
-find_path(PULZED_MINI_INCLUDE_DIRS "mini/ini.h")
-target_include_directories(${PROJECT_NAME} PRIVATE ${PULZED_MINI_INCLUDE_DIRS})

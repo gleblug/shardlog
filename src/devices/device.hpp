@@ -3,21 +3,55 @@
 #include "config/config_manager.hpp"
 #include "connection/serial.hpp"
 
+#include <condition_variable>
+#include <chrono>
+#include <atomic>
+#include <optional>
+#include <mutex>
+#include <thread>
+
+namespace chrono = std::chrono;
+
+struct MeasurementResult {
+    enum class Status {
+        OK,
+        TIMEOUT,
+        DISCONNECTED,
+    } status;
+    std::vector<std::pair<std::string, std::string>> values;
+};
+using MeasurementStatus = MeasurementResult::Status;
+
 class Device {
 public:
-    Device(const DeviceInfo& info);
-
-    void open();
+    explicit Device(const DeviceInfo& info);
+    ~Device();
+    void stop();
+    
+    void requestMeasurement();
+    bool isMeasuring() const;
+    std::optional<MeasurementResult> getResult();
 
 private:
+    void measurementThread();
+
+    std::unique_ptr<Serial> connection_;
+
+    std::thread measurementThread_;
+    std::atomic_bool stopRequested_;
+    mutable std::mutex mu_;
+    std::atomic_bool measuring_;
+    std::atomic_bool measurementRequested_;
+    std::condition_variable_any cv_;
+    std::optional<MeasurementResult> result_;
+
+    // configs
     std::string name_;
     std::string port_;
     unsigned int boudRate_;
 
-    std::unique_ptr<Serial> connection_;
-
-    double readTimeout_;
-    double readWriteDelay_;
+    chrono::duration<double> readTimeout_;
+    chrono::duration<double> readWriteDelay_;
     std::string writeSource_;
 
     CommandList initCommands_;
