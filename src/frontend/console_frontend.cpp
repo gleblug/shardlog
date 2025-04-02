@@ -30,7 +30,7 @@ void ConsoleFrontend::run() {
     bool quitModalShown = false;
     auto modalQuit = cc::ModalConfirmation(screen_.ExitLoopClosure(), [&]{ quitModalShown = false; });
 
-    std::vector<std::string> tabValues = {"Measurement", "Devices", "Quit"};
+    std::vector<std::string> tabValues = {"Measurement", "Connection", "Quit"};
     int tabSelected = 0;
     auto tabMenu = cc::NamedMenu("Menu", tabValues, tabSelected, {{tabValues.size() - 1, [&]{ quitModalShown = true; }}});
     auto tabContainer = Container::Tab({
@@ -69,20 +69,20 @@ void ConsoleFrontend::handleData(const DataEvent& event) {
 
 Component ConsoleFrontend::Measurements() {
     auto& config = ConfigManager::getInstance();
-    auto names = config.getExperimentNames();
-    ButtonOption buttonOption;
-    buttonOption.transform = [](EntryState state) {
-        state.label = (state.focused ? "> " : "  ") + state.label;
-        Element e = text(state.label) | border | size(HEIGHT, EQUAL, 3);
-        return e;
-    };
+    auto mainComponent = Container::Tab({}, &selected_);
+    return Renderer(mainComponent, [this, &config, mainComponent]{
+        Components experiments;
+        for (const auto &experimentName : config.getExperimentNames()) {
+            Components measurements;
+            for (const auto &measurementName : config.getMeasurementNames(experimentName)) {
+                measurements.push_back(Button(measurementName, []{}));
+            }
+            experiments.push_back(Collapsible(experimentName, cc::CollapsibleInner(measurements)));
+        }
 
-    Components buttons;
-    for (const auto name : names) {
-        buttons.push_back(Button(name, []{}, buttonOption));
-    }
-
-    return Container::Vertical(buttons);
+        mainComponent->Add(Container::Vertical(experiments));
+        return mainComponent->Render();
+    });
 }
 
 Component ConsoleFrontend::Connections() {

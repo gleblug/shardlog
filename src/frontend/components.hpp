@@ -70,4 +70,14 @@ Component NamedMenu(const std::string& name, const std::vector<std::string>& ite
         });
     });
 }
+
+Component CollapsibleInner(std::vector<Component> children) {
+    Component vlist = Container::Vertical(std::move(children));
+    return Renderer(vlist, [vlist] {
+        return hbox({
+            text(" "),
+            vlist->Render(),
+        });
+    });
+    }
 };

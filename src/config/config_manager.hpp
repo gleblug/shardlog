@@ -202,7 +202,7 @@ public:
             }
             return node.as<T>();
         } catch (const YAML::Exception& e) {
-            lg::warn("Use default value for '{}'", path);
+            lg::warn("Use default value for '{}', because of '{}'", path, e.what());
             return defaultValue;
         }
     }
@@ -274,6 +274,7 @@ public:
     }
 
     using CommandList = std::vector<std::string>;
+    using NamedCommandList = std::vector<std::pair<std::string, CommandList>>;
     
     [[nodiscard]] CommandList getInitCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName);
@@ -281,15 +282,15 @@ public:
         return commands;
     }
     
-    [[nodiscard]] std::map<std::string, CommandList> getReadCommands(const std::string& deviceName, const std::string& schemeName) const {
+    [[nodiscard]] NamedCommandList getReadCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<std::map<std::string, CommandList>>(config, "commands.read");
+        auto commands = getValue<NamedCommandList>(config, "commands.read");
         return commands;
     }
     
-    [[nodiscard]] std::map<std::string, CommandList> getWriteCommands(const std::string& deviceName, const std::string& schemeName) const {
+    [[nodiscard]] NamedCommandList getWriteCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<std::map<std::string, CommandList>>(config, "commands.write");
+        auto commands = getValue<NamedCommandList>(config, "commands.write");
         return commands;
     }
     
@@ -302,3 +303,4 @@ public:
 
 using DeviceInfo = ConfigManager::DeviceInfo;
 using CommandList = ConfigManager::CommandList;
+using NamedCommandList = ConfigManager::NamedCommandList;
