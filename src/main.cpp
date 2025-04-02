@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
 	try {
 		lg::set_default_logger(lg::basic_logger_mt(log_name, log_file));
 		lg::set_level(log_level);
+		lg::flush_on(lg::level::debug);
 
 		Application app;
 		app.run();
