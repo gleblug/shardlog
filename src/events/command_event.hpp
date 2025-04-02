@@ -8,12 +8,13 @@
 
 struct CommandEvent {
     enum class Type {
+        ACTIVATE_MEASUREMENT,
         START,
         STOP,
-        SET,
     } type;
 
     std::unordered_map<std::string, std::string> parameters;
 };
 
 using CommandBus = std::shared_ptr<EventBus<CommandEvent>>;
+using CommandType = CommandEvent::Type;

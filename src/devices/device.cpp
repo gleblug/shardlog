@@ -8,7 +8,6 @@ Device::Device(const DeviceInfo& info)
     : name_{info.name} 
     , port_{info.port}
     , boudRate_{info.boudRate}
-    , connection_(info.port, info.boudRate)
 {
     const auto& config = ConfigManager::getInstance();
     readTimeout_ = config.getSchemeReadTimeout(info.name, info.scheme);

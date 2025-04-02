@@ -40,12 +40,8 @@ void Application::handleCommand(const CommandEvent& event) {
 		break;
 	case CommandEvent::Type::STOP:
 		break;
-	case CommandEvent::Type::SET:
-		if (!event.parameters.contains("name")) {
-			lg::error("There is no name to set measurement");
-			break;
-		}
-		setMeasurement(event.parameters.at("name"));
+	case CommandEvent::Type::ACTIVATE_MEASUREMENT:
+		activateMeasurement(event.parameters.at("experiment_name"), event.parameters.at("measurement_name"));
 		break;
 	default:
 		lg::warn("Unknown command on app handler");
@@ -53,6 +49,7 @@ void Application::handleCommand(const CommandEvent& event) {
 	}
 }
 
-void Application::setMeasurement(const std::string& name) {
-	
+void Application::activateMeasurement(const std::string& experimentName, const std::string& measurementName) {
+	deviceManager_.configure(experimentName, measurementName);
+	lg::info("Activating measurement '{}'", measurementName);
 }

@@ -14,7 +14,7 @@ private:
     std::string port_;
     unsigned int boudRate_;
 
-    Serial connection_;
+    std::unique_ptr<Serial> connection_;
 
     double readTimeout_;
     double readWriteDelay_;

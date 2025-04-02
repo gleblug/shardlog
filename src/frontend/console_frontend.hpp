@@ -23,11 +23,11 @@ private:
     ScreenInteractive screen_;
 
     std::unordered_map<std::string, ConnectionEvent::Type> portsStatus_;
+    
+    void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
 
     Component Measurements();
-    int selected_;
-    int experimentSelected_;
-    int measurementSelected_;
+    int measurementsSelected_ = 0;
 
     Component Connections();
 };

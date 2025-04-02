@@ -20,7 +20,9 @@ public:
 private:
 	void handleCommand(const CommandEvent& event);
 	
-	void setMeasurement(const std::string& name);
+	void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
+
+	// void setMeasurement(const std::string& name);
 	// void startMeasurement();
 	// void stopMeasurement();
 

@@ -41,7 +41,7 @@ inline ReceiverSend stringToReceiverSend(const std::string& str) {
 }
 
 template<typename K, typename V>
-inline std::vector<K> mapKeys(const std::map<K, V>& map) {
+inline std::vector<K> mapKeys(const std::unordered_map<K, V>& map) {
     std::vector<K> keys;
     for (const auto& [key, _] : map) {
         keys.push_back(key);
@@ -100,8 +100,11 @@ current_scheme:
 )"};
 // clang-format on
 
-    std::map<std::string, std::map<std::string, YAML::Node>> experimentMeasurements;
-    std::map<std::string, std::map<std::string, YAML::Node>> deviceSchemes;
+    using ConfigList = std::unordered_map<std::string, YAML::Node>;
+    using ConfigFiles = std::unordered_map<std::string, ConfigList>;
+
+    ConfigFiles experimentMeasurements;
+    ConfigFiles deviceSchemes;
     
     ConfigManager() {
         loadAllConfigs();
@@ -114,7 +117,7 @@ current_scheme:
     
     void loadConfigsFromDirectory(
         const std::string& directory,
-        std::map<std::string, std::map<std::string, YAML::Node>>& configs,
+        ConfigFiles& configs,
         std::pair<std::string, std::string>& exampleConfig
     ) {
         auto path = fs::current_path() / directory;
@@ -137,7 +140,7 @@ current_scheme:
             {
                 std::string configName = entry.path().stem().string();
                 try {
-                    configs[configName] = YAML::LoadFile(entry.path().string()).as<std::map<std::string, YAML::Node>>();
+                    configs[configName] = YAML::LoadFile(entry.path().string()).as<ConfigList>();
                     lg::info("Loaded config: '{}' from '{}'", configName, entry.path().string());
                 } catch (const YAML::Exception& e) {
                     lg::error("Error loading config '{}': {}", entry.path().string(), e.what());
@@ -278,26 +281,36 @@ public:
     
     [[nodiscard]] CommandList getInitCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<CommandList>(config, "commands.init");
-        return commands;
+        return config["commands"]["init"].as<CommandList>();
     }
     
     [[nodiscard]] NamedCommandList getReadCommands(const std::string& deviceName, const std::string& schemeName) const {
-        auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<NamedCommandList>(config, "commands.read");
+        auto config = getSchemeConfig(deviceName, schemeName)["commands"]["read"];
+        NamedCommandList commands;
+        for(YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
+            commands.push_back(std::make_pair(
+                it->first.as<std::string>(),
+                it->second.as<CommandList>()
+            ));
+        }
         return commands;
     }
     
     [[nodiscard]] NamedCommandList getWriteCommands(const std::string& deviceName, const std::string& schemeName) const {
-        auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<NamedCommandList>(config, "commands.write");
+        auto config = getSchemeConfig(deviceName, schemeName)["commands"]["write"];
+        NamedCommandList commands;
+        for(YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
+            commands.push_back(std::make_pair(
+                it->first.as<std::string>(),
+                it->second.as<CommandList>()
+            ));
+        }
         return commands;
     }
     
     [[nodiscard]] CommandList getEndCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName);
-        auto commands = getValue<CommandList>(config, "commands.init");
-        return commands;
+        return config["commands"]["end"].as<CommandList>();
     }
 };
 

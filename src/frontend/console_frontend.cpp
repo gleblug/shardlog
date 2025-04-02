@@ -67,20 +67,31 @@ void ConsoleFrontend::handleData(const DataEvent& event) {
     screen_.RequestAnimationFrame();
 }
 
+void ConsoleFrontend::activateMeasurement(const std::string& experimentName, const std::string& measurementName) {
+    commandBus_->publish(CommandEvent{
+        CommandType::ACTIVATE_MEASUREMENT,
+        {{"experiment_name", experimentName}, {"measurement_name", measurementName}}
+    });
+    measurementsSelected_ = 1;
+}
+
 Component ConsoleFrontend::Measurements() {
     auto& config = ConfigManager::getInstance();
-    auto mainComponent = Container::Tab({}, &selected_);
+    auto mainComponent = Container::Tab({}, &measurementsSelected_);
     return Renderer(mainComponent, [this, &config, mainComponent]{
         Components experiments;
         for (const auto &experimentName : config.getExperimentNames()) {
             Components measurements;
             for (const auto &measurementName : config.getMeasurementNames(experimentName)) {
-                measurements.push_back(Button(measurementName, []{}));
+                measurements.push_back(Button(measurementName, [this, experimentName, measurementName]{
+                    activateMeasurement(experimentName, measurementName);
+                }));
             }
             experiments.push_back(Collapsible(experimentName, cc::CollapsibleInner(measurements)));
         }
 
         mainComponent->Add(Container::Vertical(experiments));
+        mainComponent->Add(Container::Vertical({}));
         return mainComponent->Render();
     });
 }
