@@ -24,17 +24,19 @@ Device::Device(const DeviceInfo& info)
     writeCommands_ = config.getWriteCommands(info.name, info.scheme);
     endCommands_ = config.getEndCommands(info.name, info.scheme);
 
+    connection_.setTimeout(boost::posix_time::milliseconds(readTimeout_.count()));
+    
     lg::info(
         "Device created. Name: '{}', port: '{}', boud_rate: '{}', read_timeout: '{}', read_write_delay: '{}', write_source: '{}', read_commands[0] name: '{}', read_commands[0] command[0]: '{}'",
         name_, port_, boudRate_, readTimeout_.count(), readWriteDelay_.count(), writeSource_, readCommands_[0].first, readCommands_[0].second[0]
     );
     
     try {
-        connection_ = std::make_unique<Serial>(port_, boudRate_);
+        connection_.open(port_, boudRate_);
     } catch (const boost::system::system_error& e) {
         lg::error("Failed to open serial port '{}': '{}'", port_, e.what());
     }
-    connection_->setTimeout(boost::posix_time::milliseconds(readTimeout_.count()));
+
     measurementThread_ = std::thread(&Device::measurementThread, this);
 }
 
@@ -88,9 +90,9 @@ void Device::measurementThread() {
             std::string value;
             try {
                 for (const auto& command: commandList) {
-                    connection_->writeString(command + "\n");
+                    connection_.writeString(command + "\n");
                 }
-                value = connection_->readStringUntil();
+                value = connection_.readStringUntil();
             }
             catch (const timeout_exception&) {
                 result = MeasurementResult{MeasurementStatus::TIMEOUT, {}};
@@ -121,7 +123,7 @@ void Device::reconnect() {
     connectionThread_ = std::thread([this] {
         while (true) {
             try {
-                connection_->open(port_, boudRate_);
+                connection_.open(port_, boudRate_);
                 break;
             }
             catch (const boost::system::system_error&) {

@@ -36,7 +36,7 @@ private:
     void measurementThread();
     void reconnect();
 
-    std::unique_ptr<Serial> connection_;
+    Serial connection_;
 
     std::thread connectionThread_;
     std::atomic_bool reconnectRequested_;
