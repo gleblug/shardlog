@@ -2,7 +2,6 @@
 
 #include <yaml-cpp/yaml.h>
 #include <string>
-#include <map>
 #include <memory>
 #include <vector>
 #include <iostream>
@@ -13,7 +12,9 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <cmath>
+#include <chrono>
 
+namespace chrono = std::chrono;
 namespace lg = spdlog;
 namespace fs = std::filesystem;
 
@@ -253,24 +254,29 @@ public:
         return result;
     }
         
-    [[nodiscard]] double getExperimentDuration(const std::string& experimentName, const std::string& measurementName) const {
-        return getMeasurementConfig(experimentName, measurementName)["duration"].as<double>();
+    [[nodiscard]] auto getExperimentDuration(const std::string& experimentName, const std::string& measurementName) const {
+        auto seconds = getMeasurementConfig(experimentName, measurementName)["duration"].as<double>();
+        return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
-    [[nodiscard]] double getExperimentTimeout(const std::string& experimentName, const std::string& measurementName) const {
-        return getMeasurementConfig(experimentName, measurementName)["timeout"].as<double>();
+    [[nodiscard]] auto getExperimentTimeout(const std::string& experimentName, const std::string& measurementName) const {
+        auto seconds = getMeasurementConfig(experimentName, measurementName)["timeout"].as<double>();
+        return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
-    [[nodiscard]] double getExperimentStatusTimeout(const std::string& experimentName, const std::string& measurementName) const {
-        return getMeasurementConfig(experimentName, measurementName)["status_timeout"].as<double>();
+    [[nodiscard]] auto getExperimentStatusTimeout(const std::string& experimentName, const std::string& measurementName) const {
+        auto seconds = getMeasurementConfig(experimentName, measurementName)["status_timeout"].as<double>();
+        return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
-    [[nodiscard]] unsigned long getSchemeReadTimeoutMs(const std::string& deviceName, const std::string& schemeName) const {
-        return std::lround(getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>() * 1000.0);
+    [[nodiscard]] auto getSchemeReadTimeoutMs(const std::string& deviceName, const std::string& schemeName) const {
+        auto seconds = getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>();
+        return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
-    [[nodiscard]] unsigned long getSchemeReadWriteDelayMs(const std::string& deviceName, const std::string& schemeName) const {
-        return std::lround(getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>() * 1000.0);
+    [[nodiscard]] auto getSchemeReadWriteDelayMs(const std::string& deviceName, const std::string& schemeName) const {
+        auto seconds = getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>();
+        return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
 
     [[nodiscard]] std::string getSchemeWriteSource(const std::string& deviceName, const std::string& schemeName) const {
@@ -315,6 +321,7 @@ public:
     }
 };
 
+using ReceiverInfo = ConfigManager::ReceiverInfo;
 using DeviceInfo = ConfigManager::DeviceInfo;
 using CommandList = ConfigManager::CommandList;
 using NamedCommandList = ConfigManager::NamedCommandList;

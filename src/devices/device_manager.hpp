@@ -1,10 +1,14 @@
 #pragma once
 
-#include <unordered_map>
 #include <memory>
+#include <vector>
+#include <string>
+#include <chrono>
 
 #include "devices/device.hpp"
 #include "events/data_event.hpp"
+
+namespace chrono = std::chrono;
 
 class DeviceManager {
 public:
@@ -16,8 +20,8 @@ public:
 private:
 	DataBus dataBus_;
 
-	double duration_;
-	double timeout_;
-	double statusTimeout_;
+	chrono::milliseconds duration_;
+	chrono::milliseconds timeout_;
+	chrono::milliseconds statusTimeout_;
 	std::vector<std::shared_ptr<Device>> devices_;
 };

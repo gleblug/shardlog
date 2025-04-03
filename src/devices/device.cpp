@@ -16,8 +16,8 @@ Device::Device(const DeviceInfo& info)
     , boudRate_{info.boudRate}
 {
     const auto& config = ConfigManager::getInstance();
-    readTimeout_ = chrono::milliseconds(config.getSchemeReadTimeoutMs(info.name, info.scheme));
-    readWriteDelay_ = chrono::milliseconds(config.getSchemeReadWriteDelayMs(info.name, info.scheme));
+    readTimeout_ = config.getSchemeReadTimeoutMs(info.name, info.scheme);
+    readWriteDelay_ = config.getSchemeReadWriteDelayMs(info.name, info.scheme);
     writeSource_ = config.getSchemeWriteSource(info.name, info.scheme);
     initCommands_ = config.getInitCommands(info.name, info.scheme);
     readCommands_ = config.getReadCommands(info.name, info.scheme);
