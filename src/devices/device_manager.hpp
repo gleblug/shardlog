@@ -23,7 +23,7 @@ public:
 	void stop();
 	
 private:
-	void poolThread();
+	void pollThread();
 
 	DataBus dataBus_;
 	std::vector<std::shared_ptr<Device>> devices_;
@@ -31,7 +31,7 @@ private:
 	std::atomic_bool configured_;
 	std::atomic_bool running_;
 	std::atomic_bool stopRequested_;
-	std::thread poolThread_;
+	std::thread pollThread_;
 	std::mutex mu_;
 	std::condition_variable cv_;
 

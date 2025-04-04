@@ -245,7 +245,9 @@ std::string Serial::readStringUntil(const std::string& delim)
     }
 }
 
-Serial::~Serial() {}
+Serial::~Serial() {
+    close();
+}
 
 void Serial::performReadSetup(const ReadSetupParameters& param)
 {

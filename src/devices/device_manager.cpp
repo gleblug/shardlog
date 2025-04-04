@@ -17,7 +17,9 @@ DeviceManager::DeviceManager(DataBus dataBus)
     , stopRequested_{false}
 {}
 
-DeviceManager::~DeviceManager() {}
+DeviceManager::~DeviceManager() {
+    stop();
+}
 
 void DeviceManager::configure(const std::string& experimentName, const std::string& measurementName) {
     configured_ = true;
@@ -54,18 +56,22 @@ void DeviceManager::start() {
     
     running_ = true;
     stopRequested_ = false;
-    poolThread_ = std::thread(&DeviceManager::poolThread, this);
+    pollThread_ = std::thread(&DeviceManager::pollThread, this);
 }
 
-void DeviceManager::stop() {
-    if (!running_) {
-        lg::warn("Trying to stop device manager that is not running");
-        return;
-    }
+void DeviceManager::stop() {        
+    if (!running_) return;
+    running_ = false;
     stopRequested_ = true;
+    
+    cv_.notify_all();
+    
+    if (pollThread_.joinable()) {
+        pollThread_.join();
+    }
 }
 
-void DeviceManager::poolThread() {
+void DeviceManager::pollThread() {
     auto startTime = chrono::steady_clock::now();
     uint64_t cycleNumber = 0;
     while (!stopRequested_) {
