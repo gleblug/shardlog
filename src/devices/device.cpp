@@ -37,7 +37,8 @@ Device::Device(const DeviceInfo& info)
         connection_.open(port_, boudRate_);
         result.status = MeasurementStatus::READY;
     } catch (const boost::system::system_error& e) {
-        lg::error("Failed to open serial port '{}': '{}'", port_, e.what());
+        lg::error("Failed to open serial port '{}': '{}'. Trying to reconnect...", port_, e.what());
+        reconnect();
         result.status = MeasurementStatus::DISCONNECTED;
     }
 
@@ -51,12 +52,19 @@ Device::~Device() {
 
 void Device::stop() {
     if (stopRequested_) return;
-    std::lock_guard lock(mu_);
-    stopRequested_ = true;
-    cv_.notify_all();
+    {
+        std::unique_lock lock(mu_);
+        stopRequested_ = true;
+        cv_.notify_all();
+    }
 
     if (measurementThread_.joinable()) {
         measurementThread_.join();
+    }
+
+    reconnectRequested_ = false;
+    if (connectionThread_.joinable()) {
+        connectionThread_.join();
     }
 }
 
@@ -136,14 +144,15 @@ void Device::reconnect() {
         connectionThread_.join();
     }
     connectionThread_ = std::thread([this] {
-        while (true) {
+        while (reconnectRequested_) {
             try {
                 connection_.open(port_, boudRate_);
-                break;
             }
             catch (const boost::system::system_error&) {
-                std::this_thread::sleep_for(2s);
+                lg::error("Failed to reconnect serial port '{}'", port_);
             }
+            if (connection_.isOpen()) break;
+            std::this_thread::sleep_for(2s);
         }
         lg::info("Serial port '{}' reconnected", port_);
     });
