@@ -10,6 +10,7 @@
 #include "ftxui/dom/elements.hpp"  // for operator|, separator, text, size, Element, vbox, border, GREATER_THAN, WIDTH, center, HEIGHT
 
 #include "events/connection_event.hpp"
+#include "events/data_event.hpp"
 #include "config/config_manager.hpp"
 
 using namespace ftxui;
@@ -79,5 +80,48 @@ Component CollapsibleInner(std::vector<Component> children) {
             vlist->Render(),
         });
     });
-    }
+}
+
+Component DevicesResultComponent(const DevicesResult& results) {
+    return Renderer([&results] {
+        Elements elements;
+        for (const auto& [name, result] : results) {
+            Elements resElements;
+            for (const auto& [title, value] : result.values) {
+                resElements.push_back(text(title + ": " + value));
+            }
+
+            std::string status;
+            switch (result.status) {
+                case MeasurementStatus::READY:
+                    status = "Ready";
+                    break;
+                case MeasurementStatus::TIMEOUT:
+                    status = "Timeout";
+                    break;
+                case MeasurementStatus::DISCONNECTED:
+                    status = "Disconnected";
+                    break;
+                default:
+                    status = "Unknown";
+                    break;
+            }
+
+            auto devElement = hbox({
+                text(name) | flex,
+                text(status) | bold
+            });
+
+            if (!resElements.empty()) {
+                devElement = vbox({
+                    devElement,
+                    separator(),
+                    vbox(resElements)
+                });
+            }
+            elements.push_back(devElement | border);
+        }
+        return vbox(elements);
+    });
+}
 };

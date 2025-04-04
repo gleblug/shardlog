@@ -20,8 +20,7 @@ using namespace ftxui;
 namespace lg = spdlog;
 
 ConsoleFrontend::ConsoleFrontend(CommandBus commandBus)
-    : mu_{}
-    , commandBus_{commandBus}
+    : commandBus_{commandBus}
     , screen_{ScreenInteractive::Fullscreen()}
     , portsStatus_{}
 {}
@@ -64,6 +63,7 @@ void ConsoleFrontend::handleConnection(const ConnectionEvent& event) {
 }
 
 void ConsoleFrontend::handleData(const DataEvent& event) {
+    devicesResult_ = event.results;
     screen_.RequestAnimationFrame();
 }
 
@@ -78,7 +78,7 @@ void ConsoleFrontend::activateMeasurement(const std::string& experimentName, con
 Component ConsoleFrontend::Measurements() {
     auto& config = ConfigManager::getInstance();
     auto mainComponent = Container::Tab({}, &measurementsSelected_);
-    return Renderer(mainComponent, [this, &config, mainComponent]{
+    return Renderer(mainComponent, [this, &config, mainComponent] {
         Components experiments;
         for (const auto &experimentName : config.getExperimentNames()) {
             Components measurements;
@@ -90,8 +90,23 @@ Component ConsoleFrontend::Measurements() {
             experiments.push_back(Collapsible(experimentName, cc::CollapsibleInner(measurements)));
         }
 
+        auto desk = Container::Vertical({
+            cc::DevicesResultComponent(devicesResult_) | flex,
+            Container::Horizontal({
+                Button((measuring_ ? "Stop" : "Start"), [this]{
+                    commandBus_->publish(CommandEvent{
+                        measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT
+                    });
+                    measuring_ = !measuring_;
+                }) | size(WIDTH, EQUAL, 10),
+                Renderer([this] {
+                    return text("PLACEHOLDER FOR GAUGE");
+                }) | flex
+            })
+        });
+
         mainComponent->Add(Container::Vertical(experiments));
-        mainComponent->Add(Container::Vertical({}));
+        mainComponent->Add(desk);
         return mainComponent->Render();
     });
 }

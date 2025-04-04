@@ -21,6 +21,9 @@ void Application::run() {
 	connectionBus_->subscribe("frontend_connection_handler", [this](const ConnectionEvent& event) {
 		frontend_.handleConnection(event);
 	});
+	dataBus_->subscribe("frontend_data_handler", [this](const DataEvent& event) {
+		frontend_.handleData(event);
+	});
 	dataBus_->subscribe("receivers_data_handler", [this](const DataEvent& event) {
 		for (auto& [name, receiver_ptr] : receivers_) {
 			receiver_ptr->receive(event);
@@ -36,9 +39,9 @@ void Application::run() {
 
 void Application::handleCommand(const CommandEvent& event) {
 	switch(event.type) {
-	case CommandEvent::Type::START:
+	case CommandEvent::Type::START_MEASUREMENT:
 		break;
-	case CommandEvent::Type::STOP:
+	case CommandEvent::Type::STOP_MEASUREMENT:
 		break;
 	case CommandEvent::Type::ACTIVATE_MEASUREMENT:
 		activateMeasurement(event.parameters.at("experiment_name"), event.parameters.at("measurement_name"));

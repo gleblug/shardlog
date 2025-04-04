@@ -17,8 +17,6 @@ public:
     void handleData(const DataEvent& event);
     
 private:
-    std::mutex mu_;
-
     CommandBus commandBus_;
     ScreenInteractive screen_;
 
@@ -28,6 +26,8 @@ private:
 
     Component Measurements();
     int measurementsSelected_ = 0;
+    bool measuring_ = false;
+    std::map<std::string, MeasurementResult> devicesResult_;
 
     Component Connections();
 };
