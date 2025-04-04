@@ -14,7 +14,7 @@ namespace chrono = std::chrono;
 
 struct MeasurementResult {
     enum class Status {
-        OK,
+        READY,
         TIMEOUT,
         DISCONNECTED,
     } status;
@@ -30,14 +30,19 @@ public:
     
     void requestMeasurement();
     bool isMeasuring() const;
+    std::string getName() const;
     std::optional<MeasurementResult> getResult();
+    // std::vector<std::string> getHeaders() const;
 
 private:
     void measurementThread();
     void reconnect();
+    void publishResult(const MeasurementResult& result);
+    std::string header(const std::string& title) const;
 
     Serial connection_;
 
+    std::thread statusThread_;
     std::thread connectionThread_;
     std::atomic_bool reconnectRequested_;
 

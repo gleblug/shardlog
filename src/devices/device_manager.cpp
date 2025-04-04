@@ -1,18 +1,123 @@
 #include "device_manager.hpp"
 #include "config/config_manager.hpp"
 
+#include <spdlog/spdlog.h>
+#include <chrono>
+#include <unordered_map>
+#include <map>
+
+namespace chrono = std::chrono;
+using namespace std::chrono_literals;
+namespace lg = spdlog;
+
 DeviceManager::DeviceManager(DataBus dataBus)
     : dataBus_{dataBus}
+    , configured_{false}
+    , running_{false}
+    , stopRequested_{false}
 {}
 
 DeviceManager::~DeviceManager() {}
 
 void DeviceManager::configure(const std::string& experimentName, const std::string& measurementName) {
+    configured_ = true;
+    devices_.clear();
+
     const auto& config = ConfigManager::getInstance();
     duration_ = config.getExperimentDuration(experimentName, measurementName);
     timeout_ = config.getExperimentTimeout(experimentName, measurementName);
     statusTimeout_ = config.getExperimentStatusTimeout(experimentName, measurementName);
+
+    std::map<std::string, MeasurementResult> results;
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
-        devices_.push_back(std::make_shared<Device>(deviceInfo));
+        auto device = std::make_shared<Device>(deviceInfo);
+        devices_.push_back(device);
+
+        auto result = device->getResult();
+        if (result) {
+            results.insert_or_assign(device->getName(), result.value());
+        }
     }
+    auto now = chrono::steady_clock::now();
+    dataBus_->publish({now, now, results});
+}
+
+void DeviceManager::start() {
+    if (!configured_) {
+        lg::warn("Trying to start device manager without configuration");
+        return;
+    }
+    if (running_) {
+        lg::warn("Trying to start device manager that is already running");
+        return;
+    }
+    
+    running_ = true;
+    stopRequested_ = false;
+    poolThread_ = std::thread(&DeviceManager::poolThread, this);
+}
+
+void DeviceManager::stop() {
+    if (!running_) {
+        lg::warn("Trying to stop device manager that is not running");
+        return;
+    }
+    stopRequested_ = true;
+}
+
+void DeviceManager::poolThread() {
+    auto startTime = chrono::steady_clock::now();
+    uint64_t cycleNumber = 0;
+    while (!stopRequested_) {
+        cycleNumber++;
+        auto nextStartAfter = startTime + timeout_ * cycleNumber;
+        
+        auto measurementStart = chrono::steady_clock::now();
+        for (auto& device : devices_) {
+            // there is no need to check measuring manually
+            device->requestMeasurement();
+        }
+
+        std::map<std::string, MeasurementResult> results;
+        size_t counter = 0;
+        while ((chrono::steady_clock::now() < nextStartAfter) && !stopRequested_) {
+            for (auto& device : devices_) {
+                auto result = device->getResult();
+                if (result) {
+                    switch (result->status) {
+                    case MeasurementStatus::READY:
+                        break;
+                    case MeasurementStatus::TIMEOUT:
+                        lg::warn("Device '{}' timed out", device->getName());
+                        break;
+                    case MeasurementStatus::DISCONNECTED:
+                        lg::warn("Device '{}' disconnected", device->getName());
+                        break;
+                    default:
+                        lg::error("Unknown device status '{}'", device->getName());
+                        break;
+                    }
+                    results.insert_or_assign(device->getName(), result.value());
+                    ++counter;
+                }
+            }
+            if (counter == devices_.size()) break; // get data from all devices
+            std::this_thread::sleep_for(10ms);
+        }
+
+        dataBus_->publish({startTime, measurementStart, results});
+
+        {
+            std::unique_lock lock(mu_);
+            if (stopRequested_) break;
+            
+            auto remaining_time = nextStartAfter - chrono::steady_clock::now();
+            if (remaining_time > 0ms) {
+                cv_.wait_for(lock, remaining_time, [this] { 
+                    return stopRequested_.load();
+                });
+            }
+        }
+    }
+    running_ = false;
 }

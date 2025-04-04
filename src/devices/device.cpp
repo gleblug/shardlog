@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <cmath>
+#include <format>
 
 namespace lg = spdlog;
 using namespace std::chrono_literals;
@@ -31,12 +32,16 @@ Device::Device(const DeviceInfo& info)
         name_, port_, boudRate_, readTimeout_.count(), readWriteDelay_.count(), writeSource_, readCommands_[0].first, readCommands_[0].second[0]
     );
     
+    MeasurementResult result;
     try {
         connection_.open(port_, boudRate_);
+        result.status = MeasurementStatus::READY;
     } catch (const boost::system::system_error& e) {
         lg::error("Failed to open serial port '{}': '{}'", port_, e.what());
+        result.status = MeasurementStatus::DISCONNECTED;
     }
 
+    publishResult(result);
     measurementThread_ = std::thread(&Device::measurementThread, this);
 }
 
@@ -46,6 +51,7 @@ Device::~Device() {
 
 void Device::stop() {
     if (stopRequested_) return;
+    std::lock_guard lock(mu_);
     stopRequested_ = true;
     cv_.notify_all();
 
@@ -65,27 +71,39 @@ bool Device::isMeasuring() const {
     return measuring_;
 }
 
+std::string Device::getName() const {
+    return name_;
+}
+
 std::optional<MeasurementResult> Device::getResult() {
-    std::lock_guard lock(mu_);
+    std::unique_lock lock(mu_);
     if (!result_.has_value()) return std::nullopt;
     measuring_ = false;
     return std::exchange(result_, std::nullopt);
 }
 
+// std::vector<std::string> Device::getHeaders() const {
+//     std::vector<std::string> headers;
+//     for (const auto& [title, _]: readCommands_) {
+//         headers.push_back(header(title));
+//     }
+//     return headers;
+// }
+
 void Device::measurementThread() {
     while (true) {
         {
             std::unique_lock lock(mu_);
+            if (stopRequested_) break;
             cv_.wait(lock, [this] {
                 return measurementRequested_ || stopRequested_;
             });
-
             if (stopRequested_) break;
-
+            
             measurementRequested_ = false;
         }
 
-        MeasurementResult result{MeasurementStatus::OK, {}};
+        MeasurementResult result{MeasurementStatus::READY, {}};
         for (const auto& [title, commandList]: readCommands_) {
             std::string value;
             try {
@@ -103,13 +121,10 @@ void Device::measurementThread() {
                 reconnect();
                 break;
             }
-            result.values.emplace_back(title, value);
+            result.values.emplace_back(header(title), value);
         }
 
-        {
-            std::unique_lock lock(mu_);
-            result_ = result;
-        }
+        publishResult(result);
     }
 }
 
@@ -134,6 +149,11 @@ void Device::reconnect() {
     });
 }
 
-// void Device::open() {
-//     // open serial port
-// }
+void Device::publishResult(const MeasurementResult& result) {
+    std::unique_lock lock(mu_);
+    result_ = result;
+}
+
+std::string Device::header(const std::string& valueTitle) const {
+    return std::format("{}.{}", name_, valueTitle);
+}
