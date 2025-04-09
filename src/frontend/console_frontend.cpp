@@ -64,6 +64,11 @@ void ConsoleFrontend::handleConnection(const ConnectionEvent& event) {
         portsStatus_.insert_or_assign(event.port, event.type);
         break;
     }
+    connectedPorts_.clear();
+    std::transform(portsStatus_.cbegin(), portsStatus_.cend(), std::back_inserter(connectedPorts_),
+    [](const std::pair<std::string, ConnectionEvent::Type>& status){
+        return status.first;
+    });
     screen_.RequestAnimationFrame();
 }
 
@@ -137,13 +142,35 @@ Component ConsoleFrontend::Connections() {
 }
 
 Component ConsoleFrontend::Terminal() {
-    // auto connection = std::make_shared<Serial>(port, boudrate);
+    auto connection = std::make_shared<Serial>();
+    connection->setTimeout(boost::posix_time::seconds(2));
     auto outputArray = std::make_shared<std::vector<std::string>>();
     auto inputString = std::make_shared<std::string>();
-    
+    auto portSelected = std::make_shared<int>(0);
+    auto boudrateString = std::make_shared<std::string>("9600");
+
     // control
     auto control = Container::Horizontal({
-        Button(" < ", [this]{ connectionSelected_ = 0; })
+        Button(" < ", [this, connection]{
+            connection->close();
+            connectionSelected_ = 0;
+        }),
+        Dropdown(&connectedPorts_, portSelected.get()) | flex,
+        Input(boudrateString.get(), "boudrate")
+            | CatchEvent([](Event event) { return event.is_character() && !std::isdigit(event.character()[0]); })
+            | CatchEvent([](Event event) { return event == Event::Return; })
+            | size(WIDTH, EQUAL, 12) | flex_shrink | border,
+        Button("Open", [this, portSelected, boudrateString, connection, outputArray]{
+            connection->close();
+            auto port = connectedPorts_.at(*portSelected);
+            auto boudrate = std::atoi(boudrateString->c_str());
+            try {
+                connection->open(port, boudrate);
+                outputArray->push_back(std::format("< Connected successfully: '{}'", port));
+            } catch (const boost::system::system_error& e) {
+                outputArray->push_back(std::format("< Connection error: '{}'", e.what()));
+            }
+        })
     });
 
     // output
@@ -151,10 +178,23 @@ Component ConsoleFrontend::Terminal() {
 
     // input
     auto inputStyle = InputOption::Default();
-    inputStyle.on_enter = [outputArray, inputString]{
-        auto newLine = std::format("> {}", *inputString);
-        outputArray->push_back(newLine);
+    inputStyle.on_enter = [connection, outputArray, inputString]{
+        auto command = *inputString;
+        outputArray->push_back(std::format("> {}", command));
         inputString->clear();
+        
+        auto output = std::string("Error: ");
+        try {
+            connection->writeString(command + "\n");
+            output = connection->readStringUntil();
+        }
+        catch (const timeout_exception&) {
+            output += "timeout";
+        }
+        catch (const boost::system::system_error&) {
+            output += "disconnected";
+        }
+        outputArray->push_back(std::format("< {}", output));
     };
     auto consoleInput = Input(inputString.get(), inputStyle) | border;
 

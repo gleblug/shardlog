@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include <ftxui/component/screen_interactive.hpp>
 
 #include "event_bus/event_bus.hpp"
@@ -20,6 +23,7 @@ private:
     CommandBus commandBus_;
     ScreenInteractive screen_;
 
+    std::vector<std::string> connectedPorts_;
     std::unordered_map<std::string, ConnectionEvent::Type> portsStatus_;
     
     void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
@@ -32,5 +36,4 @@ private:
     Component Connections();
     Component Terminal();
     int connectionSelected_ = 0;
-
 };
