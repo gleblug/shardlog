@@ -124,4 +124,43 @@ Component DevicesResultComponent(const DevicesResult& results) {
         return vbox(elements);
     });
 }
+
+Component ScrollableTextArea(std::shared_ptr<std::vector<std::string>> textArray) {
+    class Impl : public ComponentBase {
+    private:
+        float scroll_y = 1;
+        std::shared_ptr<std::vector<std::string>> array;
+    public:
+        Impl(std::shared_ptr<std::vector<std::string>> textArray)
+        : array(textArray)
+        {
+            auto content = Renderer([&] {
+                Elements textElements;
+                std::transform(array->cbegin(), array->cend(), std::back_inserter(textElements), [](const std::string& s) {
+                    return text(s);
+                });
+                return vbox(textElements);
+            });
+ 
+            auto scrollable_content = Renderer(content, [&, content] {
+            return content->Render() | focusPositionRelative(0, scroll_y) |
+                frame | flex;
+            });
+ 
+            SliderOption<float> option_y;
+            option_y.value = &scroll_y;
+            option_y.min = 0.f;
+            option_y.max = 1.f;
+            option_y.increment = 0.01f;
+            option_y.direction = Direction::Down;
+            auto scrollbar_y = Slider(option_y);
+ 
+            Add(Container::Horizontal({
+                scrollable_content,
+                scrollbar_y,
+            }) | flex );
+        }
+    };
+    return Make<Impl>(textArray);
+}
 };

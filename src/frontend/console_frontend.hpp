@@ -30,4 +30,7 @@ private:
     std::map<std::string, MeasurementResult> devicesResult_;
 
     Component Connections();
+    Component Terminal();
+    int connectionSelected_ = 0;
+
 };

@@ -10,11 +10,13 @@
 #include <ftxui/component/component_options.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/component/component.hpp>
+#include <ftxui/dom/elements.hpp>
 #include <spdlog/spdlog.h>
 
 #include <iostream>
 #include <vector>
 #include <string>
+#include <format>
 
 using namespace ftxui;
 namespace lg = spdlog;
@@ -34,7 +36,10 @@ void ConsoleFrontend::run() {
     auto tabMenu = cc::NamedMenu("Menu", tabValues, tabSelected, {{tabValues.size() - 1, [&]{ quitModalShown = true; }}});
     auto tabContainer = Container::Tab({
         Measurements(),
-        Connections(),
+        Container::Tab({
+            Connections(),
+            Terminal()
+            }, &connectionSelected_)
     }, &tabSelected);
 
     int menu_size = 24;
@@ -112,18 +117,51 @@ Component ConsoleFrontend::Measurements() {
 }
 
 Component ConsoleFrontend::Connections() {
-    return Renderer([this]{
+    auto terminalButton = Button("Terminal", [this]{ connectionSelected_ = 1; });
+    return Renderer(terminalButton, [terminalButton, this]{
         Elements ports;
         for (const auto& [port, status] : portsStatus_) {
             if (status == ConnectionEvent::Type::DISCONNECTED) {
                 continue;
             }
-            ports.push_back(vbox({
-                hbox(text(" ●  ") | color(Color::GrayDark), text(port)) | bold,
-                separator(),
+            ports.push_back(hbox({
+                text(port) | bold | flex,
                 text("Not ready"),
-            }) | border | size(WIDTH, EQUAL, 20));
+            }) | border);
         }
-        return flexbox(ports);
+        return vbox({
+            vbox(ports) | flex,
+            terminalButton->Render()
+        });
+    });
+}
+
+Component ConsoleFrontend::Terminal() {
+    // auto connection = std::make_shared<Serial>(port, boudrate);
+    auto outputArray = std::make_shared<std::vector<std::string>>();
+    auto inputString = std::make_shared<std::string>();
+    
+    // control
+    auto control = Container::Horizontal({
+        Button(" < ", [this]{ connectionSelected_ = 0; })
+    });
+
+    // output
+    auto consoleOutput = cc::ScrollableTextArea(outputArray);
+
+    // input
+    auto inputStyle = InputOption::Default();
+    inputStyle.on_enter = [outputArray, inputString]{
+        auto newLine = std::format("> {}", *inputString);
+        outputArray->push_back(newLine);
+        inputString->clear();
+    };
+    auto consoleInput = Input(inputString.get(), inputStyle) | border;
+
+    // result
+    return Container::Vertical({
+        control,
+        consoleOutput,
+        consoleInput
     });
 }
