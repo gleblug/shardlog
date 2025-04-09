@@ -16,6 +16,7 @@ set(target_sources
     connection/connection_manager.cpp
     devices/device_manager.cpp
     devices/device.cpp
+    receivers/receiver_manager.cpp
     # config/config_parser.cpp
     # hardware/serial/ListSerial.cpp
     # application.cpp

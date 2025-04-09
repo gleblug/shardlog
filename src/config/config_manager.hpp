@@ -67,9 +67,6 @@ current_measurements:
     - type: DIRECTORY
       name: example_measurements
       send: DATA
-    - type: TELEGRAM
-      name: gleblug
-      send: STATUS
   devices:
     - name: example_meter
       scheme: current_scheme

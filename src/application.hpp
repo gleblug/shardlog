@@ -12,6 +12,7 @@
 #include "receivers/receiver.hpp"
 #include "frontend/console_frontend.hpp"
 #include "connection/connection_manager.hpp"
+#include "receivers/receiver_manager.hpp"
 
 class Application {
 public:
@@ -21,10 +22,8 @@ private:
 	void handleCommand(const CommandEvent& event);
 	
 	void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
-
-	// void setMeasurement(const std::string& name);
-	// void startMeasurement();
-	// void stopMeasurement();
+	void startMeasurement();
+	void stopMeasurement();
 
 	DataBus dataBus_;
 	ConnectionBus connectionBus_;
@@ -32,7 +31,7 @@ private:
 
 	DeviceManager deviceManager_;
 	ConnectionManager connectionManager_;
-	std::unordered_map<std::string, std::shared_ptr<IReceiver>> receivers_;
+	ReceiverManager receiverManager_;
 
 	ConsoleFrontend frontend_;
 };

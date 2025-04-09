@@ -9,6 +9,7 @@ Application::Application()
 	, commandBus_{std::make_shared<EventBus<CommandEvent>>()}
 	, deviceManager_(dataBus_)
 	, connectionManager_(connectionBus_)
+	, receiverManager_()
 	, frontend_(commandBus_)
 {}
 
@@ -25,12 +26,9 @@ void Application::run() {
 		frontend_.handleData(event);
 	});
 	dataBus_->subscribe("receivers_data_handler", [this](const DataEvent& event) {
-		for (auto& [name, receiver_ptr] : receivers_) {
-			receiver_ptr->receive(event);
-		}
+		receiverManager_.handleData(event);
 	});
 
-	// deviceManager_.start();
 	connectionManager_.start();
 	frontend_.run();
 
@@ -40,8 +38,10 @@ void Application::run() {
 void Application::handleCommand(const CommandEvent& event) {
 	switch(event.type) {
 	case CommandEvent::Type::START_MEASUREMENT:
+		startMeasurement();
 		break;
 	case CommandEvent::Type::STOP_MEASUREMENT:
+		stopMeasurement();
 		break;
 	case CommandEvent::Type::ACTIVATE_MEASUREMENT:
 		activateMeasurement(event.parameters.at("experiment_name"), event.parameters.at("measurement_name"));
@@ -53,6 +53,18 @@ void Application::handleCommand(const CommandEvent& event) {
 }
 
 void Application::activateMeasurement(const std::string& experimentName, const std::string& measurementName) {
+	receiverManager_.configure(experimentName, measurementName);
 	deviceManager_.configure(experimentName, measurementName);
-	lg::info("Activating measurement '{}'", measurementName);
+	lg::info("Activating experiment '{}', measurement '{}'", experimentName, measurementName);
+}
+
+void Application::startMeasurement() {
+	receiverManager_.reset();
+	deviceManager_.start();
+	lg::info("Start measurement");
+}
+
+void Application::stopMeasurement() {
+	deviceManager_.stop();
+	lg::info("Stop measurement");
 }
