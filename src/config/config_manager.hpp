@@ -126,7 +126,7 @@ current_scheme:
         for (const auto& entry : fs::directory_iterator(path)) {
             if (entry.is_regular_file() &&
                 std::unordered_set<std::string>({".yaml", ".yml"})
-                .contains(entry.path().extension())) 
+                .contains(entry.path().extension().string())) 
             {
                 std::string configName = entry.path().stem().string();
                 try {

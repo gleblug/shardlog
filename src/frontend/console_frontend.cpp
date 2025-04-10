@@ -152,22 +152,24 @@ Component ConsoleFrontend::Terminal() {
             connection->close();
             connectionSelected_ = 0;
         }),
-        Dropdown(&connectedPorts_, portSelected.get()) | flex,
-        Input(boudrateString.get(), "boudrate")
-            | CatchEvent([](Event event) { return event.is_character() && !std::isdigit(event.character()[0]); })
-            | CatchEvent([](Event event) { return event == Event::Return; })
-            | size(WIDTH, EQUAL, 12) | flex_shrink | border,
-        Button("Open", [this, portSelected, boudrateString, connection, outputArray]{
-            connection->close();
-            auto port = connectedPorts_.at(*portSelected);
-            auto boudrate = std::atoi(boudrateString->c_str());
-            try {
-                connection->open(port, boudrate);
-                outputArray->push_back(std::format("< Connected successfully: '{}'", port));
-            } catch (const boost::system::system_error& e) {
-                outputArray->push_back(std::format("< Connection error: '{}'", e.what()));
-            }
-        })
+        Container::Horizontal({
+            Dropdown(&connectedPorts_, portSelected.get()) | flex,
+            Input(boudrateString.get(), "boudrate")
+                | CatchEvent([](Event event) { return event.is_character() && !std::isdigit(event.character()[0]); })
+                | CatchEvent([](Event event) { return event == Event::Return; })
+                | size(WIDTH, EQUAL, 12) | flex_shrink | border,
+            Button("Open", [this, portSelected, boudrateString, connection, outputArray]{
+                connection->close();
+                auto port = connectedPorts_.at(*portSelected);
+                auto boudrate = std::atoi(boudrateString->c_str());
+                try {
+                    connection->open(port, boudrate);
+                    outputArray->push_back(std::format("< Connected successfully: '{}'", port));
+                } catch (const boost::system::system_error& e) {
+                    outputArray->push_back(std::format("< Connection error: '{}'", e.what()));
+                }
+            })
+        }) | Maybe([this]{ return !connectedPorts_.empty(); }) | flex
     });
 
     // output
