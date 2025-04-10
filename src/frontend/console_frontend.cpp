@@ -53,24 +53,17 @@ void ConsoleFrontend::run() {
 }
 
 void ConsoleFrontend::handleConnection(const ConnectionEvent& event) {
-    switch (event.type) {
-    case ConnectionEvent::Type::DISCONNECTED:
-        portsStatus_.erase(event.port);
-        break;
-    default:
-        portsStatus_.insert_or_assign(event.port, event.type);
-        break;
-    }
+    portsStatus_.insert_or_assign(event.port, event.type);
     connectedPorts_.clear();
     std::transform(portsStatus_.cbegin(), portsStatus_.cend(), std::back_inserter(connectedPorts_),
-    [](const std::pair<std::string, ConnectionEvent::Type>& status){
+    [](const std::pair<std::string, ConnectionType>& status){
         return status.first;
     });
     screen_.RequestAnimationFrame();
 }
 
 void ConsoleFrontend::handleData(const DataEvent& event) {
-    devicesResult_ = event.results;
+    devicesData_ = event.results;
     screen_.RequestAnimationFrame();
 }
 
@@ -98,15 +91,15 @@ Component ConsoleFrontend::Measurements() {
         }
 
         auto desk = Container::Vertical({
-            cc::DevicesResultComponent(devicesResult_) | flex,
+            DevicesComponent(),
             Container::Horizontal({
                 Button((measuring_ ? "Stop" : "Start"), [this]{
                     commandBus_->publish(CommandEvent{
-                        measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT
+                        measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT, {}
                     });
                     measuring_ = !measuring_;
                 }) | size(WIDTH, EQUAL, 10),
-                Renderer([this] {
+                Renderer([] {
                     return text("PLACEHOLDER FOR GAUGE");
                 }) | flex
             })
@@ -118,12 +111,55 @@ Component ConsoleFrontend::Measurements() {
     });
 }
 
+Component ConsoleFrontend::DevicesComponent() {
+    return Renderer([this] {
+        Elements elements;
+        for (const auto& [name, data] : devicesData_) {
+            Elements resElements;
+            for (const auto& [title, value] : data.values) {
+                resElements.push_back(text(title + ": " + value));
+            }
+
+            std::string status;
+            switch (portsStatus_.at(data.port)) {
+            case ConnectionType::CONNECTED:
+                status = "Connected";
+                break;
+            case ConnectionType::TIMEOUT:
+                status = "Timeout";
+                break;
+            case ConnectionType::DISCONNECTED:
+                status = "Disconnected";
+                break;
+            default:
+                status = "Unknown";
+                break;
+            }
+
+            auto devElement = hbox({
+                text(name) | flex,
+                text(status) | bold
+            });
+
+            if (!resElements.empty()) {
+                devElement = vbox({
+                    devElement,
+                    separator(),
+                    vbox(resElements)
+                });
+            }
+            elements.push_back(devElement | border);
+        }
+        return vbox(elements);
+    });
+}
+
 Component ConsoleFrontend::Connections() {
     auto terminalButton = Button("Terminal", [this]{ connectionSelected_ = 1; });
     return Renderer(terminalButton, [terminalButton, this]{
         Elements ports;
         for (const auto& [port, status] : portsStatus_) {
-            if (status == ConnectionEvent::Type::DISCONNECTED) {
+            if (status == ConnectionType::DISCONNECTED) {
                 continue;
             }
             ports.push_back(hbox({

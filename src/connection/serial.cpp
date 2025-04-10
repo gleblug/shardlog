@@ -77,7 +77,7 @@ std::vector<std::string> Serial::allPorts()
 }
 
 Serial::Serial() : io(), port(io), timer(io),
-timeout(boost::posix_time::seconds(0)), bytesTransferred(), result() {
+timeout(boost::posix_time::seconds(0)), result(), bytesTransferred() {
 }
 
 Serial::Serial(const std::string& devname, unsigned int baud_rate,

@@ -24,14 +24,15 @@ private:
     ScreenInteractive screen_;
 
     std::vector<std::string> connectedPorts_;
-    std::unordered_map<std::string, ConnectionEvent::Type> portsStatus_;
+    std::unordered_map<std::string, ConnectionType> portsStatus_;
     
     void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
 
     Component Measurements();
+    Component DevicesComponent();
     int measurementsSelected_ = 0;
     bool measuring_ = false;
-    std::map<std::string, DeviceData> devicesResult_;
+    std::map<std::string, DeviceData> devicesData_;
 
     Component Connections();
     Component Terminal();

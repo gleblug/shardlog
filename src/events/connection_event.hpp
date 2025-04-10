@@ -5,15 +5,16 @@
 
 #include "event_bus/event_bus.hpp"
 
+enum class ConnectionType {
+    DISCONNECTED,
+    AVAILABLE,
+    CONNECTED,
+    TIMEOUT,
+};
+
 struct ConnectionEvent {
-    enum class Type {
-        READY,
-        TIMEOUT,
-        CONNECTED,
-        DISCONNECTED,
-    } type;
-    
     std::string port;
+    ConnectionType type;
 };
 
 using ConnectionBus = std::shared_ptr<EventBus<ConnectionEvent>>;

@@ -35,11 +35,9 @@ Device::Device(const DeviceInfo& info)
     DeviceData result;
     try {
         connection_.open(port_, boudRate_);
-        result.status = DeviceStatus::READY;
     } catch (const boost::system::system_error& e) {
         lg::error("Failed to open port '{}': '{}'. Trying to reconnect...", port_, e.what());
         reconnect();
-        result.status = DeviceStatus::DISCONNECTED;
     }
 
     publishResult(result);
@@ -90,14 +88,6 @@ std::optional<DeviceData> Device::getResult() {
     return std::exchange(result_, std::nullopt);
 }
 
-// std::vector<std::string> Device::getHeaders() const {
-//     std::vector<std::string> headers;
-//     for (const auto& [title, _]: readCommands_) {
-//         headers.push_back(header(title));
-//     }
-//     return headers;
-// }
-
 void Device::measurementThread() {
     while (true) {
         {
@@ -111,7 +101,7 @@ void Device::measurementThread() {
             measurementRequested_ = false;
         }
 
-        DeviceData result{DeviceStatus::READY, {}};
+        DeviceData result{port_, {}};
         for (const auto& [title, commandList]: readCommands_) {
             std::string value;
             try {
@@ -121,11 +111,9 @@ void Device::measurementThread() {
                 value = connection_.readStringUntil();
             }
             catch (const timeout_exception&) {
-                result = DeviceData{DeviceStatus::TIMEOUT, {}};
                 break;
             }
             catch (const boost::system::system_error&) {
-                result = DeviceData{DeviceStatus::DISCONNECTED, {}};
                 reconnect();
                 break;
             }

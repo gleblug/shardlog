@@ -9,9 +9,8 @@
 namespace chrono = std::chrono;
 namespace lg = spdlog;
 
-Directory::Directory(const std::string& relativePath, DataType send, const std::string& delim)
+Directory::Directory(const std::string& relativePath, const std::string& delim)
     : directory_{fs::current_path() / relativePath}
-    , sending_{send}
     , delim_{delim}
     , firstReceipt_{false}
 {

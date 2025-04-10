@@ -13,7 +13,6 @@ enum class ReceiverType {
 struct ReceiverInfo {
     ReceiverType type;
     std::string name;
-    DataType send;
 };
 
 class IReceiver {

@@ -30,18 +30,10 @@ void DeviceManager::configure(const std::string& experimentName, const std::stri
     timeout_ = config.getExperimentTimeout(experimentName, measurementName);
     statusTimeout_ = config.getExperimentStatusTimeout(experimentName, measurementName);
 
-    std::map<std::string, DeviceData> results;
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
         auto device = std::make_shared<Device>(deviceInfo);
         devices_.push_back(device);
-
-        auto result = device->getResult();
-        if (result) {
-            results.insert_or_assign(device->getName(), result.value());
-        }
     }
-    auto now = chrono::steady_clock::now();
-    dataBus_->publish({now, now, results});
 }
 
 void DeviceManager::start() {
@@ -90,19 +82,6 @@ void DeviceManager::pollThread() {
             for (auto& device : devices_) {
                 auto result = device->getResult();
                 if (result) {
-                    switch (result->status) {
-                    case DeviceStatus::READY:
-                        break;
-                    case DeviceStatus::TIMEOUT:
-                        lg::warn("Device '{}' timed out", device->getName());
-                        break;
-                    case DeviceStatus::DISCONNECTED:
-                        lg::warn("Device '{}' disconnected", device->getName());
-                        break;
-                    default:
-                        lg::error("Unknown device status '{}'", device->getName());
-                        break;
-                    }
                     results.insert_or_assign(device->getName(), result.value());
                     ++counter;
                 }
@@ -111,7 +90,7 @@ void DeviceManager::pollThread() {
             std::this_thread::sleep_for(10ms);
         }
 
-        dataBus_->publish({startTime, measurementStart, results});
+        dataBus_->publish({startTime, measurementStart, startTime + duration_, results});
 
         {
             std::unique_lock lock(mu_);

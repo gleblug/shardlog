@@ -27,12 +27,6 @@ inline ReceiverType stringToReceiverType(const std::string& str) {
     return ReceiverType::UNKNOWN;
 }
 
-inline DataType stringToReceiverSend(const std::string& str) {
-    if (str == "DATA") return DataType::WORKLOAD;
-    if (str == "STATUS") return DataType::STATUS;
-    return DataType::UNKNOWN;
-}
-
 template<typename K, typename V>
 inline std::vector<K> mapKeys(const std::unordered_map<K, V>& map) {
     std::vector<K> keys;
@@ -57,7 +51,6 @@ current_measurements:
   receivers:
     - type: DIRECTORY
       name: example_measurements
-      send: DATA
   devices:
     - name: example_meter
       scheme: current_scheme
@@ -208,7 +201,6 @@ public:
             ReceiverInfo info;
             info.type = stringToReceiverType(receiver["type"].as<std::string>());
             info.name = receiver["name"].as<std::string>();
-            info.send = stringToReceiverSend(receiver["send"].as<std::string>());
             result.push_back(info);
         }
         return result;

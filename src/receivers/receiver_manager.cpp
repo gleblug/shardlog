@@ -12,7 +12,7 @@ namespace lg = spdlog;
 std::shared_ptr<IReceiver> makeReceiver(const ReceiverInfo info) {
     switch (info.type) {
     case ReceiverType::DIRECTORY:
-        return std::make_shared<Directory>(info.name, info.send);
+        return std::make_shared<Directory>(info.name);
         break;
     default:
         lg::warn("Unknown receiver type");
@@ -34,13 +34,13 @@ void ReceiverManager::configure(const std::string& experimentName, const std::st
 void ReceiverManager::reset() {
     auto currentTime = chrono::floor<chrono::seconds>(chrono::system_clock::now());
     auto currentName = std::format("{}_{:%Y-%m-%d_%H-%M-%S}", baseName_, currentTime);
-    for (const auto receiver : receivers_) {
+    for (const auto& receiver : receivers_) {
         receiver->renew(currentName);
     }
 }
 
 void ReceiverManager::handleData(const DataEvent& event) {
-    for (const auto receiver : receivers_) {
+    for (const auto& receiver : receivers_) {
         receiver->receive(event);
     }
 }

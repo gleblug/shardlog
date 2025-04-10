@@ -31,7 +31,7 @@ set(target_sources
 list(TRANSFORM target_sources PREPEND "src/")
 
 add_executable(${PROJECT_NAME} ${target_sources})
-# target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 find_package(boost_asio CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::asio)

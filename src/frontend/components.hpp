@@ -51,7 +51,7 @@ Component ModalConfirmation(std::function<void()> yesClosure,
 
 Component NamedMenu(const std::string& name, const std::vector<std::string>& items, int& selected, const std::unordered_map<int, std::function<void()>> &customActions = {}) {
     Components buttons;
-    for (int i = 0; i < items.size(); i++) {
+    for (size_t i = 0; i < items.size(); i++) {
         std::function<void()> action = [&selected, i]{ selected = i; };
         if (customActions.contains(i)) {
             action = customActions.at(i);
@@ -79,49 +79,6 @@ Component CollapsibleInner(std::vector<Component> children) {
             text(" "),
             vlist->Render(),
         });
-    });
-}
-
-Component DevicesResultComponent(const DevicesResult& results) {
-    return Renderer([&results] {
-        Elements elements;
-        for (const auto& [name, result] : results) {
-            Elements resElements;
-            for (const auto& [title, value] : result.values) {
-                resElements.push_back(text(title + ": " + value));
-            }
-
-            std::string status;
-            switch (result.status) {
-                case DeviceStatus::READY:
-                    status = "Ready";
-                    break;
-                case DeviceStatus::TIMEOUT:
-                    status = "Timeout";
-                    break;
-                case DeviceStatus::DISCONNECTED:
-                    status = "Disconnected";
-                    break;
-                default:
-                    status = "Unknown";
-                    break;
-            }
-
-            auto devElement = hbox({
-                text(name) | flex,
-                text(status) | bold
-            });
-
-            if (!resElements.empty()) {
-                devElement = vbox({
-                    devElement,
-                    separator(),
-                    vbox(resElements)
-                });
-            }
-            elements.push_back(devElement | border);
-        }
-        return vbox(elements);
     });
 }
 

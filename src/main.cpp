@@ -5,7 +5,7 @@
 
 namespace lg = spdlog;
 
-int main(int argc, char* argv[]) {
+int main() {
 	const auto log_name = PROJECT_NAME;
 	const auto log_file = "logs/shardlog.log";
 	#if DEBUG

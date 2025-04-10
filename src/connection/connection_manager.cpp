@@ -53,8 +53,8 @@ void ConnectionManager::run() {
             if (!connected_.contains(port)) {
                 connected_.insert(port);
                 connectionBus_->publish(ConnectionEvent{
-                    ConnectionEvent::Type::CONNECTED,
                     port,
+                    ConnectionType::AVAILABLE,
                 });
                 lg::info("Connected: {}", port);
             }
@@ -64,8 +64,8 @@ void ConnectionManager::run() {
             if (!newConnected.contains(port)) {
                 connected_.erase(port);
                 connectionBus_->publish(ConnectionEvent{
-                    ConnectionEvent::Type::DISCONNECTED,
                     port,
+                    ConnectionType::DISCONNECTED,
                 });
                 lg::info("Disconnected: {}", port);
             }
