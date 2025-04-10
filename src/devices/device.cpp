@@ -129,7 +129,7 @@ void Device::measurementThread() {
                 reconnect();
                 break;
             }
-            result.values.emplace_back(header(title), value);
+            result.values.emplace_back(title, value);
         }
 
         publishResult(result);
@@ -165,8 +165,4 @@ void Device::reconnect() {
 void Device::publishResult(const DeviceData& result) {
     std::unique_lock lock(mu_);
     result_ = result;
-}
-
-std::string Device::header(const std::string& valueTitle) const {
-    return std::format("{}.{}", name_, valueTitle);
 }

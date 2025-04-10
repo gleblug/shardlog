@@ -32,7 +32,7 @@ void ReceiverManager::configure(const std::string& experimentName, const std::st
 }
 
 void ReceiverManager::reset() {
-    auto currentTime = chrono::system_clock::now();
+    auto currentTime = chrono::floor<chrono::seconds>(chrono::system_clock::now());
     auto currentName = std::format("{}_{:%Y-%m-%d_%H-%M-%S}", baseName_, currentTime);
     for (const auto receiver : receivers_) {
         receiver->renew(currentName);

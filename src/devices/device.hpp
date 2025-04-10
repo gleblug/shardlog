@@ -29,7 +29,6 @@ private:
     void measurementThread();
     void reconnect();
     void publishResult(const DeviceData& result);
-    std::string header(const std::string& title) const;
 
     Serial connection_;
 
