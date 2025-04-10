@@ -31,7 +31,7 @@ private:
     Component Measurements();
     int measurementsSelected_ = 0;
     bool measuring_ = false;
-    std::map<std::string, MeasurementResult> devicesResult_;
+    std::map<std::string, DeviceData> devicesResult_;
 
     Component Connections();
     Component Terminal();

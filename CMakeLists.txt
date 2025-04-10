@@ -17,6 +17,7 @@ set(target_sources
     devices/device_manager.cpp
     devices/device.cpp
     receivers/receiver_manager.cpp
+    receivers/directory.cpp
     # config/config_parser.cpp
     # hardware/serial/ListSerial.cpp
     # application.cpp

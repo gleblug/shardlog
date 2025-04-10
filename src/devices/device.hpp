@@ -2,6 +2,7 @@
 
 #include "config/config_manager.hpp"
 #include "connection/serial.hpp"
+#include "events/data_event.hpp"
 
 #include <condition_variable>
 #include <chrono>
@@ -12,16 +13,6 @@
 
 namespace chrono = std::chrono;
 
-struct MeasurementResult {
-    enum class Status {
-        READY,
-        TIMEOUT,
-        DISCONNECTED,
-    } status;
-    std::vector<std::pair<std::string, std::string>> values;
-};
-using MeasurementStatus = MeasurementResult::Status;
-
 class Device {
 public:
     explicit Device(const DeviceInfo& info);
@@ -31,13 +22,13 @@ public:
     void requestMeasurement();
     bool isMeasuring() const;
     std::string getName() const;
-    std::optional<MeasurementResult> getResult();
+    std::optional<DeviceData> getResult();
     // std::vector<std::string> getHeaders() const;
 
 private:
     void measurementThread();
     void reconnect();
-    void publishResult(const MeasurementResult& result);
+    void publishResult(const DeviceData& result);
     std::string header(const std::string& title) const;
 
     Serial connection_;
@@ -52,7 +43,7 @@ private:
     std::atomic_bool measuring_;
     std::atomic_bool measurementRequested_;
     std::condition_variable_any cv_;
-    std::optional<MeasurementResult> result_;
+    std::optional<DeviceData> result_;
 
     // configs
     std::string name_;

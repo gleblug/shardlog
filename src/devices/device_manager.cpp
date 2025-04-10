@@ -30,7 +30,7 @@ void DeviceManager::configure(const std::string& experimentName, const std::stri
     timeout_ = config.getExperimentTimeout(experimentName, measurementName);
     statusTimeout_ = config.getExperimentStatusTimeout(experimentName, measurementName);
 
-    std::map<std::string, MeasurementResult> results;
+    std::map<std::string, DeviceData> results;
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
         auto device = std::make_shared<Device>(deviceInfo);
         devices_.push_back(device);
@@ -84,19 +84,19 @@ void DeviceManager::pollThread() {
             device->requestMeasurement();
         }
 
-        std::map<std::string, MeasurementResult> results;
+        std::map<std::string, DeviceData> results;
         size_t counter = 0;
         while ((chrono::steady_clock::now() < nextStartAfter) && !stopRequested_) {
             for (auto& device : devices_) {
                 auto result = device->getResult();
                 if (result) {
                     switch (result->status) {
-                    case MeasurementStatus::READY:
+                    case DeviceStatus::READY:
                         break;
-                    case MeasurementStatus::TIMEOUT:
+                    case DeviceStatus::TIMEOUT:
                         lg::warn("Device '{}' timed out", device->getName());
                         break;
-                    case MeasurementStatus::DISCONNECTED:
+                    case DeviceStatus::DISCONNECTED:
                         lg::warn("Device '{}' disconnected", device->getName());
                         break;
                     default:

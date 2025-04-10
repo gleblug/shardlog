@@ -14,21 +14,12 @@
 #include <cmath>
 #include <chrono>
 
+#include "receivers/receiver.hpp"
+#include "events/data_event.hpp"
+
 namespace chrono = std::chrono;
 namespace lg = spdlog;
 namespace fs = std::filesystem;
-
-enum class ReceiverType {
-    DIRECTORY,
-    TELEGRAM,
-    UNKNOWN
-};
-
-enum class ReceiverSend {
-    DATA,
-    STATUS,
-    UNKNOWN
-};
 
 inline ReceiverType stringToReceiverType(const std::string& str) {
     if (str == "DIRECTORY") return ReceiverType::DIRECTORY;
@@ -36,10 +27,10 @@ inline ReceiverType stringToReceiverType(const std::string& str) {
     return ReceiverType::UNKNOWN;
 }
 
-inline ReceiverSend stringToReceiverSend(const std::string& str) {
-    if (str == "DATA") return ReceiverSend::DATA;
-    if (str == "STATUS") return ReceiverSend::STATUS;
-    return ReceiverSend::UNKNOWN;
+inline DataType stringToReceiverSend(const std::string& str) {
+    if (str == "DATA") return DataType::WORKLOAD;
+    if (str == "STATUS") return DataType::STATUS;
+    return DataType::UNKNOWN;
 }
 
 template<typename K, typename V>
@@ -209,12 +200,6 @@ public:
         }
     }
     
-    struct ReceiverInfo {
-        ReceiverType type;
-        std::string name;
-        ReceiverSend send;
-    };
-    
     [[nodiscard]] std::vector<ReceiverInfo> getReceivers(const std::string& experimentName, const std::string& measurementName) const {
         std::vector<ReceiverInfo> result;
         auto measurement = getMeasurementConfig(experimentName, measurementName);
@@ -318,7 +303,6 @@ public:
     }
 };
 
-using ReceiverInfo = ConfigManager::ReceiverInfo;
 using DeviceInfo = ConfigManager::DeviceInfo;
 using CommandList = ConfigManager::CommandList;
 using NamedCommandList = ConfigManager::NamedCommandList;

@@ -93,13 +93,13 @@ Component DevicesResultComponent(const DevicesResult& results) {
 
             std::string status;
             switch (result.status) {
-                case MeasurementStatus::READY:
+                case DeviceStatus::READY:
                     status = "Ready";
                     break;
-                case MeasurementStatus::TIMEOUT:
+                case DeviceStatus::TIMEOUT:
                     status = "Timeout";
                     break;
-                case MeasurementStatus::DISCONNECTED:
+                case DeviceStatus::DISCONNECTED:
                     status = "Disconnected";
                     break;
                 default:

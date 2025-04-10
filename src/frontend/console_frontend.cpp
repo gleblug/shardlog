@@ -1,10 +1,7 @@
 #include "console_frontend.hpp"
 
-// #include "components/modal.hpp"
-// #include "components/measurement.hpp"
-// #include "components/device.hpp"
-// #include "components/menu.hpp"
 #include "components.hpp"
+#include "connection/serial.hpp"
 
 #include <ftxui/component/captured_mouse.hpp>
 #include <ftxui/component/component_options.hpp>

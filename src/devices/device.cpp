@@ -32,14 +32,14 @@ Device::Device(const DeviceInfo& info)
         name_, port_, boudRate_, readTimeout_.count(), readWriteDelay_.count(), writeSource_, readCommands_[0].first, readCommands_[0].second[0]
     );
     
-    MeasurementResult result;
+    DeviceData result;
     try {
         connection_.open(port_, boudRate_);
-        result.status = MeasurementStatus::READY;
+        result.status = DeviceStatus::READY;
     } catch (const boost::system::system_error& e) {
         lg::error("Failed to open port '{}': '{}'. Trying to reconnect...", port_, e.what());
         reconnect();
-        result.status = MeasurementStatus::DISCONNECTED;
+        result.status = DeviceStatus::DISCONNECTED;
     }
 
     publishResult(result);
@@ -83,7 +83,7 @@ std::string Device::getName() const {
     return name_;
 }
 
-std::optional<MeasurementResult> Device::getResult() {
+std::optional<DeviceData> Device::getResult() {
     std::unique_lock lock(mu_);
     if (!result_.has_value()) return std::nullopt;
     measuring_ = false;
@@ -111,7 +111,7 @@ void Device::measurementThread() {
             measurementRequested_ = false;
         }
 
-        MeasurementResult result{MeasurementStatus::READY, {}};
+        DeviceData result{DeviceStatus::READY, {}};
         for (const auto& [title, commandList]: readCommands_) {
             std::string value;
             try {
@@ -121,11 +121,11 @@ void Device::measurementThread() {
                 value = connection_.readStringUntil();
             }
             catch (const timeout_exception&) {
-                result = MeasurementResult{MeasurementStatus::TIMEOUT, {}};
+                result = DeviceData{DeviceStatus::TIMEOUT, {}};
                 break;
             }
             catch (const boost::system::system_error&) {
-                result = MeasurementResult{MeasurementStatus::DISCONNECTED, {}};
+                result = DeviceData{DeviceStatus::DISCONNECTED, {}};
                 reconnect();
                 break;
             }
@@ -162,7 +162,7 @@ void Device::reconnect() {
     });
 }
 
-void Device::publishResult(const MeasurementResult& result) {
+void Device::publishResult(const DeviceData& result) {
     std::unique_lock lock(mu_);
     result_ = result;
 }
