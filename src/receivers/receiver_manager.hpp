@@ -9,8 +9,8 @@
 
 class ReceiverManager {
 public:
-    explicit ReceiverManager();
-    ~ReceiverManager();
+    explicit ReceiverManager() = default;
+    ~ReceiverManager() = default;
 
 	void configure(const std::string& experimentName, const std::string& measurementName);
     void reset();

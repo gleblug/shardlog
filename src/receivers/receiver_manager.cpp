@@ -20,9 +20,6 @@ std::shared_ptr<IReceiver> makeReceiver(const ReceiverInfo info) {
     }
 }
 
-ReceiverManager::ReceiverManager() {}
-ReceiverManager::~ReceiverManager() {}
-
 void ReceiverManager::configure(const std::string& experimentName, const std::string& measurementName) {
     receivers_.clear();
     baseName_ = std::format("{}_{}", experimentName, measurementName);
