@@ -8,8 +8,9 @@
 namespace lg = spdlog;
 using namespace std::chrono_literals;
 
-Device::Device(const DeviceInfo& info)
-    : reconnectRequested_{false}
+Device::Device(const DeviceInfo& info, ConnectionBus connectionBus)
+    : connectionBus_{connectionBus}
+    , reconnectRequested_{false}
     , stopRequested_{false}
     , measuring_{false}
     , measurementRequested_{false}

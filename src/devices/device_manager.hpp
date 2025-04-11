@@ -10,12 +10,13 @@
 
 #include "devices/device.hpp"
 #include "events/data_event.hpp"
+#include "events/connection_event.hpp"
 
 namespace chrono = std::chrono;
 
 class DeviceManager {
 public:
-	explicit DeviceManager(DataBus dataBus);
+	explicit DeviceManager(DataBus dataBus, ConnectionBus connectionBus);
     ~DeviceManager();
 
 	void configure(const std::string& experimentName, const std::string& measurementName);
@@ -26,6 +27,7 @@ private:
 	void pollThread();
 
 	DataBus dataBus_;
+	ConnectionBus connectionBus_;
 	std::vector<std::shared_ptr<Device>> devices_;
 
 	std::atomic_bool configured_;

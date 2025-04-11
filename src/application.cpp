@@ -7,7 +7,7 @@ Application::Application()
 	: dataBus_{std::make_shared<EventBus<DataEvent>>()}
 	, connectionBus_{std::make_shared<EventBus<ConnectionEvent>>()}
 	, commandBus_{std::make_shared<EventBus<CommandEvent>>()}
-	, deviceManager_(dataBus_)
+	, deviceManager_(dataBus_, connectionBus_)
 	, connectionManager_(connectionBus_)
 	, receiverManager_()
 	, frontend_(commandBus_)

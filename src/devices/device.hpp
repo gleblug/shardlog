@@ -3,6 +3,7 @@
 #include "config/config_manager.hpp"
 #include "connection/serial.hpp"
 #include "events/data_event.hpp"
+#include "events/connection_event.hpp"
 
 #include <condition_variable>
 #include <chrono>
@@ -15,7 +16,7 @@ namespace chrono = std::chrono;
 
 class Device {
 public:
-    explicit Device(const DeviceInfo& info);
+    explicit Device(const DeviceInfo& info, ConnectionBus connectionBus);
     ~Device();
     void stop();
     
@@ -30,6 +31,7 @@ private:
     void reconnect();
     void publishResult(const DeviceData& result);
 
+    ConnectionBus connectionBus_;
     Serial connection_;
 
     std::thread statusThread_;

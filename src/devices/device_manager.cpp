@@ -10,8 +10,9 @@ namespace chrono = std::chrono;
 using namespace std::chrono_literals;
 namespace lg = spdlog;
 
-DeviceManager::DeviceManager(DataBus dataBus)
+DeviceManager::DeviceManager(DataBus dataBus, ConnectionBus connectionBus)
     : dataBus_{dataBus}
+    , connectionBus_{connectionBus}
     , configured_{false}
     , running_{false}
     , stopRequested_{false}
@@ -31,7 +32,7 @@ void DeviceManager::configure(const std::string& experimentName, const std::stri
     statusTimeout_ = config.getExperimentStatusTimeout(experimentName, measurementName);
 
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
-        auto device = std::make_shared<Device>(deviceInfo);
+        auto device = std::make_shared<Device>(deviceInfo, connectionBus_);
         devices_.push_back(device);
     }
 }
