@@ -84,6 +84,15 @@ std::optional<DeviceData> Device::getResult() {
     return std::exchange(result_, std::nullopt);
 }
 
+DeviceData Device::getDummyData() const {
+    DeviceData data;
+    data.port = port_;
+    for (const auto& command : readCommands_) {
+        data.values.push_back({command.first, ""});
+    }
+    return data;
+}
+
 void Device::measurementThread() {
     while (true) {
         {

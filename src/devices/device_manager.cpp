@@ -34,6 +34,7 @@ void DeviceManager::configure(const std::string& experimentName, const std::stri
 
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
         auto device = std::make_shared<Device>(deviceInfo, connectionBus_);
+        lastResult_.insert_or_assign(device->getName(), device->getDummyData());
         devices_.push_back(device);
     }
 }
@@ -77,13 +78,12 @@ void DeviceManager::pollThread() {
             device->requestMeasurement();
         }
 
-        std::map<std::string, DeviceData> results;
         size_t counter = 0;
         while ((chrono::steady_clock::now() < nextStartAfter) && !stopRequested_) {
             for (auto& device : devices_) {
                 auto result = device->getResult();
                 if (result) {
-                    results.insert_or_assign(device->getName(), result.value());
+                    lastResult_.at(device->getName()) = result.value();
                     ++counter;
                 }
             }
@@ -91,7 +91,7 @@ void DeviceManager::pollThread() {
             std::this_thread::sleep_for(10ms);
         }
 
-        dataBus_->publish({startTime, measurementStart, endTime, results});
+        dataBus_->publish({startTime, measurementStart, endTime, lastResult_});
 
         if (chrono::steady_clock::now() > endTime) {
             commandBus_->publish({CommandType::STOP_MEASUREMENT, {}});

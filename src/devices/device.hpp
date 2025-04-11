@@ -24,7 +24,7 @@ public:
     bool isMeasuring() const;
     std::string getName() const;
     std::optional<DeviceData> getResult();
-    // std::vector<std::string> getHeaders() const;
+    DeviceData getDummyData() const;
 
 private:
     void measurementThread();

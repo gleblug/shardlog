@@ -31,6 +31,7 @@ private:
 	ConnectionBus connectionBus_;
 	CommandBus commandBus_;
 	std::vector<std::shared_ptr<Device>> devices_;
+	std::map<std::string, DeviceData> lastResult_;
 
 	std::atomic_bool configured_;
 	std::atomic_bool running_;
