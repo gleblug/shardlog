@@ -40,5 +40,4 @@ private:
 	// configs
 	chrono::milliseconds duration_;
 	chrono::milliseconds timeout_;
-	chrono::milliseconds statusTimeout_;
 };

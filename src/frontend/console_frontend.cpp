@@ -107,10 +107,10 @@ Component ConsoleFrontend::Desk() {
     // controls
     ButtonOption controlBtnOption;
     controlBtnOption.on_click = [this]{
-        measuring_ = !measuring_;
         commandBus_->publish(CommandEvent{
             measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT, {}
         });
+        measuring_ = !measuring_;
     };
     controlBtnOption.transform = [this](EntryState state) {
         state.label = measuring_ ? "Stop" : "Start";

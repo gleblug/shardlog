@@ -47,7 +47,6 @@ private:
 current_measurements:
   duration: 600
   timeout: 1
-  status_timeout: 60
   receivers:
     - type: DIRECTORY
       name: example_measurements
@@ -63,22 +62,22 @@ current_measurements:
         R"(# avoid dots in filename
 current_scheme:
   read_timeout: 1
-  read_write_delay: 0.5
-  write_from: schemes/current_data.csv
+  read_write_delay: 0.5                 # <-- required if commands.write defined
+  write_from: schemes/current_data.csv  # <-- required if commands.write defined
   commands:
-    init:
+    init:                               # <-- optional
       - CONFIGURE_TO_DC_CURRENT
     read:
       voltage:
         - READ_VOLTAGE_COMMANDS
       current:
         - READ_CURRENT_COMMANDS
-    write:
+    write:                              # <-- optional
       voltage:
         - SET_VOLTAGE_COMMANDS {0}
       current:
         - SET_CURRENT_COMMANDS {1}
-    end:
+    end:                                # <-- optional
       - END_COMMANDS
 )"};
 // clang-format on
@@ -167,28 +166,12 @@ public:
         return deviceSchemes.at(deviceName).at(schemeName);
     }
     
-    [[nodiscard]] YAML::Node resolveScheme(const std::string& reference) const {
-        std::vector<std::string> parts;
-        boost::split(parts, reference, boost::is_any_of("."));
-        if (parts.size() != 2) {
-            throw std::runtime_error("Invalid scheme reference: " + reference);
-        }
-        return getSchemeConfig(parts.at(0), parts.at(1));
-    }
-    
     template<typename T>
-    [[nodiscard]] T getValue(const YAML::Node& config, const std::string& path, const T& defaultValue = T()) const {
-        std::vector<std::string> parts;
-        boost::split(parts, path, boost::is_any_of("."));
-        
+    [[nodiscard]] T getOptionalValue(const YAML::Node& config, const std::string& field, const T& defaultValue = T()) const {        
         try {
-            auto node = config;
-            for (const auto& part : parts) {
-                node = node[part];
-            }
-            return node.as<T>();
+            return config[field].as<T>();
         } catch (const YAML::Exception& e) {
-            lg::warn("Use default value for '{}', because of '{}'", path, e.what());
+            lg::warn("Use default value for '{}', because of '{}'", field, e.what());
             return defaultValue;
         }
     }
@@ -238,31 +221,27 @@ public:
         return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
-    [[nodiscard]] auto getExperimentStatusTimeout(const std::string& experimentName, const std::string& measurementName) const {
-        auto seconds = getMeasurementConfig(experimentName, measurementName)["status_timeout"].as<double>();
-        return chrono::milliseconds(std::llround(seconds * 1000.0));
-    }
-    
     [[nodiscard]] auto getSchemeReadTimeoutMs(const std::string& deviceName, const std::string& schemeName) const {
         auto seconds = getSchemeConfig(deviceName, schemeName)["read_timeout"].as<double>();
         return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
     
     [[nodiscard]] auto getSchemeReadWriteDelayMs(const std::string& deviceName, const std::string& schemeName) const {
-        auto seconds = getSchemeConfig(deviceName, schemeName)["read_write_delay"].as<double>();
+        auto seconds = getOptionalValue<double>(getSchemeConfig(deviceName, schemeName), "read_write_delay", 0.5);
         return chrono::milliseconds(std::llround(seconds * 1000.0));
     }
 
     [[nodiscard]] std::string getSchemeWriteSource(const std::string& deviceName, const std::string& schemeName) const {
-        return getSchemeConfig(deviceName, schemeName)["write_from"].as<std::string>();
+        auto sourcePath = getOptionalValue<std::string>(getSchemeConfig(deviceName, schemeName), "write_from");
+        return sourcePath;
     }
 
     using CommandList = std::vector<std::string>;
     using NamedCommandList = std::vector<std::pair<std::string, CommandList>>;
     
     [[nodiscard]] CommandList getInitCommands(const std::string& deviceName, const std::string& schemeName) const {
-        auto config = getSchemeConfig(deviceName, schemeName);
-        return config["commands"]["init"].as<CommandList>();
+        auto config = getSchemeConfig(deviceName, schemeName)["commands"];
+        return getOptionalValue<CommandList>(config, "init");
     }
     
     [[nodiscard]] NamedCommandList getReadCommands(const std::string& deviceName, const std::string& schemeName) const {
@@ -279,6 +258,9 @@ public:
     
     [[nodiscard]] NamedCommandList getWriteCommands(const std::string& deviceName, const std::string& schemeName) const {
         auto config = getSchemeConfig(deviceName, schemeName)["commands"]["write"];
+        if (config.IsNull()) {
+            return {};
+        }
         NamedCommandList commands;
         for(YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
             commands.push_back(std::make_pair(
@@ -290,8 +272,8 @@ public:
     }
     
     [[nodiscard]] CommandList getEndCommands(const std::string& deviceName, const std::string& schemeName) const {
-        auto config = getSchemeConfig(deviceName, schemeName);
-        return config["commands"]["end"].as<CommandList>();
+        auto config = getSchemeConfig(deviceName, schemeName)["commands"];
+        return getOptionalValue<CommandList>(config, "end");
     }
 };
 

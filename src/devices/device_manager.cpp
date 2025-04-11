@@ -29,7 +29,6 @@ void DeviceManager::configure(const std::string& experimentName, const std::stri
     const auto& config = ConfigManager::getInstance();
     duration_ = config.getExperimentDuration(experimentName, measurementName);
     timeout_ = config.getExperimentTimeout(experimentName, measurementName);
-    statusTimeout_ = config.getExperimentStatusTimeout(experimentName, measurementName);
 
     for (const auto& deviceInfo : config.getDevices(experimentName, measurementName)) {
         auto device = std::make_shared<Device>(deviceInfo, connectionBus_);
