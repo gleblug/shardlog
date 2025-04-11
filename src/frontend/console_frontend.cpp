@@ -9,6 +9,7 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <spdlog/spdlog.h>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <iostream>
 #include <vector>
@@ -222,6 +223,8 @@ Component ConsoleFrontend::Terminal() {
         try {
             connection->writeString(command + "\n");
             output = connection->readStringUntil();
+            boost::replace_all(output, "\n", "[LF]");
+            boost::replace_all(output, "\r", "[CR]");
         }
         catch (const timeout_exception&) {
             output += "timeout";

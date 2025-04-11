@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <cmath>
 #include <format>
+#include <boost/algorithm/string/erase.hpp>
 
 namespace lg = spdlog;
 using namespace std::chrono_literals;
@@ -109,6 +110,7 @@ void Device::measurementThread() {
                     connection_.writeString(command + "\n");
                 }
                 value = connection_.readStringUntil();
+                boost::erase_all(value, "\r");
             }
             catch (const timeout_exception&) {
                 break;
