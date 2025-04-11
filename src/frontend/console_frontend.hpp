@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 #include <ftxui/component/screen_interactive.hpp>
 
@@ -11,6 +12,8 @@
 #include "events/data_event.hpp"
 
 using namespace ftxui;
+namespace chrono = std::chrono;
+using namespace std::chrono_literals;
 
 class ConsoleFrontend {
 public:
@@ -33,6 +36,8 @@ private:
     int measurementsSelected_ = 0;
     bool measuring_ = false;
     std::map<std::string, DeviceData> devicesData_;
+    chrono::seconds remainS_ = 0s;
+    float percentage_ = 0.0;
 
     Component Connections();
     Component Terminal();

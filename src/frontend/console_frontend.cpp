@@ -68,6 +68,12 @@ void ConsoleFrontend::handleConnection(const ConnectionEvent& event) {
 
 void ConsoleFrontend::handleData(const DataEvent& event) {
     devicesData_ = event.results;
+    auto duration = event.end - event.start;
+    auto passed = event.timestamp - event.start;
+    auto remain = event.end - event.timestamp;
+    remainS_ = chrono::ceil<chrono::seconds>(remain);
+    percentage_ = static_cast<float>(passed.count()) / static_cast<float>(duration.count());
+    if (percentage_ > 1.0) percentage_ = 1.0;
     screen_.RequestAnimationFrame();
 }
 
@@ -116,13 +122,17 @@ Component ConsoleFrontend::Desk() {
         state.label = measuring_ ? "Stop" : "Start";
         return text(state.label) | border;
     };
-    auto controlBtn = Button(controlBtnOption);
+    auto controlBtn = Button(controlBtnOption) | size(WIDTH, EQUAL, 10);
 
     auto controls = Container::Horizontal({
-        controlBtn | size(WIDTH, EQUAL, 10),
-        Renderer([] {
-            return text("PLACEHOLDER FOR GAUGE");
-        }) | flex
+        controlBtn,
+        Renderer([this] {
+            return hbox({
+                gauge(percentage_) | flex,
+                separator(),
+                text(std::format("{}s", remainS_.count()))
+            });
+        }) | border | flex
     });
 
     return Container::Vertical({
@@ -141,7 +151,7 @@ Component ConsoleFrontend::Connections() {
             }
             ports.push_back(hbox({
                 text(port) | bold | flex,
-                text("Not ready"),
+                text("Available"),
             }) | border);
         }
         return vbox({
