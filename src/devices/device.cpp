@@ -93,6 +93,36 @@ DeviceData Device::getDummyData() const {
     return data;
 }
 
+void Device::init() {
+    try {
+        for (const auto& command: initCommands_) {
+            connection_.writeString(command + "\n");
+        }
+        connectionBus_->publish({port_, ConnectionType::CONNECTED});
+    }
+    catch (const timeout_exception&) {
+        connectionBus_->publish({port_, ConnectionType::TIMEOUT});
+    }
+    catch (const boost::system::system_error&) {
+        reconnect();
+    }
+}
+// fixme: many code duplication
+void Device::end() {
+    try {
+        for (const auto& command: endCommands_) {
+            connection_.writeString(command + "\n");
+        }
+        connectionBus_->publish({port_, ConnectionType::CONNECTED});
+    }
+    catch (const timeout_exception&) {
+        connectionBus_->publish({port_, ConnectionType::TIMEOUT});
+    }
+    catch (const boost::system::system_error&) {
+        reconnect();
+    }
+}
+
 void Device::measurementThread() {
     while (true) {
         {

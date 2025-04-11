@@ -68,6 +68,9 @@ void DeviceManager::pollThread() {
     auto startTime = chrono::steady_clock::now();
     auto endTime = startTime + duration_;
     uint64_t cycleNumber = 0;
+    for (auto& device : devices_) {
+        device->init();
+    }
     while (!stopRequested_) {
         cycleNumber++;
         auto nextStartAfter = startTime + timeout_ * cycleNumber;
@@ -108,6 +111,9 @@ void DeviceManager::pollThread() {
                 });
             }
         }
+    }
+    for (auto& device : devices_) {
+        device->end();
     }
     running_ = false;
 }

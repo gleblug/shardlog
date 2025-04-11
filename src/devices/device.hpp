@@ -26,6 +26,9 @@ public:
     std::optional<DeviceData> getResult();
     DeviceData getDummyData() const;
 
+    void init();
+    void end();
+
 private:
     void measurementThread();
     void reconnect();
