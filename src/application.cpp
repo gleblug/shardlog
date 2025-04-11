@@ -7,7 +7,7 @@ Application::Application()
 	: dataBus_{std::make_shared<EventBus<DataEvent>>()}
 	, connectionBus_{std::make_shared<EventBus<ConnectionEvent>>()}
 	, commandBus_{std::make_shared<EventBus<CommandEvent>>()}
-	, deviceManager_(dataBus_, connectionBus_)
+	, deviceManager_(dataBus_, connectionBus_, commandBus_)
 	, connectionManager_(connectionBus_)
 	, receiverManager_()
 	, frontend_(commandBus_)
@@ -59,6 +59,7 @@ void Application::activateMeasurement(const std::string& experimentName, const s
 }
 
 void Application::startMeasurement() {
+	frontend_.setStateMeasuring(true);
 	receiverManager_.reset();
 	deviceManager_.start();
 	lg::info("Start measurement");
@@ -66,5 +67,6 @@ void Application::startMeasurement() {
 
 void Application::stopMeasurement() {
 	deviceManager_.stop();
+	frontend_.setStateMeasuring(false);
 	lg::info("Stop measurement");
 }

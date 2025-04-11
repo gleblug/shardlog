@@ -114,47 +114,4 @@ inline Component ScrollableWrapper(Component content) {
     };
     return Make<Impl>(content);
 }
-
-inline Component DevicesComponent(const std::map<std::string, DeviceData>& devicesData, const std::unordered_map<std::string, ConnectionType>& portsStatus) {
-    return Renderer([&] {
-        Elements elements;
-        for (const auto& [name, data] : devicesData) {
-            Elements resElements;
-            for (const auto& [title, value] : data.values) {
-                resElements.push_back(text(title + ": " + value));
-            }
-
-            std::string status;
-            switch (portsStatus.at(data.port)) {
-            case ConnectionType::CONNECTED:
-                status = "Connected";
-                break;
-            case ConnectionType::TIMEOUT:
-                status = "Timeout";
-                break;
-            case ConnectionType::DISCONNECTED:
-                status = "Disconnected";
-                break;
-            default:
-                status = "Unknown";
-                break;
-            }
-
-            auto devElement = hbox({
-                text(name) | flex,
-                text(status) | bold
-            });
-
-            if (!resElements.empty()) {
-                devElement = vbox({
-                    devElement,
-                    separator(),
-                    vbox(resElements)
-                });
-            }
-            elements.push_back(devElement | border);
-        }
-        return vbox(elements);
-    });
-}
 };

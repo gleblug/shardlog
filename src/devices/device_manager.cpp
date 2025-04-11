@@ -10,9 +10,10 @@ namespace chrono = std::chrono;
 using namespace std::chrono_literals;
 namespace lg = spdlog;
 
-DeviceManager::DeviceManager(DataBus dataBus, ConnectionBus connectionBus)
+DeviceManager::DeviceManager(DataBus dataBus, ConnectionBus connectionBus, CommandBus commandBus)
     : dataBus_{dataBus}
     , connectionBus_{connectionBus}
+    , commandBus_{commandBus}
     , configured_{false}
     , running_{false}
     , stopRequested_{false}
@@ -20,6 +21,7 @@ DeviceManager::DeviceManager(DataBus dataBus, ConnectionBus connectionBus)
 
 DeviceManager::~DeviceManager() {
     stop();
+    if (pollThread_.joinable()) pollThread_.join();
 }
 
 void DeviceManager::configure(const std::string& experimentName, const std::string& measurementName) {
@@ -48,6 +50,8 @@ void DeviceManager::start() {
     
     running_ = true;
     stopRequested_ = false;
+        
+    if (pollThread_.joinable()) pollThread_.join();
     pollThread_ = std::thread(&DeviceManager::pollThread, this);
 }
 
@@ -57,14 +61,11 @@ void DeviceManager::stop() {
     stopRequested_ = true;
     
     cv_.notify_all();
-    
-    if (pollThread_.joinable()) {
-        pollThread_.join();
-    }
 }
 
 void DeviceManager::pollThread() {
     auto startTime = chrono::steady_clock::now();
+    auto endTime = startTime + duration_;
     uint64_t cycleNumber = 0;
     while (!stopRequested_) {
         cycleNumber++;
@@ -90,7 +91,11 @@ void DeviceManager::pollThread() {
             std::this_thread::sleep_for(10ms);
         }
 
-        dataBus_->publish({startTime, measurementStart, startTime + duration_, results});
+        dataBus_->publish({startTime, measurementStart, endTime, results});
+
+        if (chrono::steady_clock::now() > endTime) {
+            commandBus_->publish({CommandType::STOP_MEASUREMENT, {}});
+        }
 
         {
             std::unique_lock lock(mu_);

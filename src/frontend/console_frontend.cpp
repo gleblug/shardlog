@@ -22,7 +22,6 @@ namespace lg = spdlog;
 ConsoleFrontend::ConsoleFrontend(CommandBus commandBus)
     : commandBus_{commandBus}
     , screen_{ScreenInteractive::Fullscreen()}
-    , portsStatus_{}
 {}
 
 void ConsoleFrontend::run() {
@@ -52,17 +51,23 @@ void ConsoleFrontend::run() {
 
     auto renderer = Renderer(resizable, [&]{ return resizable->Render() | border; });
     renderer |= Modal(modalQuit, &quitModalShown);
- 
+    
     screen_.Loop(renderer);
 }
 
+void ConsoleFrontend::setStateMeasuring(bool state) {
+    measuring_ = state;
+}
+
 void ConsoleFrontend::handleConnection(const ConnectionEvent& event) {
+    std::unique_lock lock(mu_);
     portsStatus_.insert_or_assign(event.port, event.type);
-    connectedPorts_.clear();
-    std::transform(portsStatus_.cbegin(), portsStatus_.cend(), std::back_inserter(connectedPorts_),
+    std::vector<std::string> connectedPorts;
+    std::transform(portsStatus_.cbegin(), portsStatus_.cend(), std::back_inserter(connectedPorts),
     [](const std::pair<std::string, ConnectionType>& status){
         return status.first;
     });
+    connectedPorts_ = connectedPorts;
     screen_.RequestAnimationFrame();
 }
 
@@ -108,7 +113,34 @@ Component ConsoleFrontend::Measurements() {
 
 Component ConsoleFrontend::Desk() {
     // devices
-    auto devices = cc::ScrollableWrapper(cc::DevicesComponent(devicesData_, portsStatus_));
+    auto devicesComponent = Renderer([this] {
+        Elements elements;
+        std::unique_lock lock(mu_);
+        for (const auto& [name, data] : devicesData_) {
+            Elements resElements;
+            for (const auto& [title, value] : data.values) {
+                resElements.push_back(text(title + ": " + value));
+            }
+
+            std::string status = connectionStatus(portsStatus_.at(data.port));
+
+            auto devElement = hbox({
+                text(name) | flex,
+                text(status) | bold
+            });
+
+            if (!resElements.empty()) {
+                devElement = vbox({
+                    devElement,
+                    separator(),
+                    vbox(resElements)
+                });
+            }
+            elements.push_back(devElement | border);
+        }
+        return vbox(elements);
+    });
+    auto devices = cc::ScrollableWrapper(devicesComponent);
 
     // controls
     ButtonOption controlBtnOption;
@@ -116,7 +148,6 @@ Component ConsoleFrontend::Desk() {
         commandBus_->publish(CommandEvent{
             measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT, {}
         });
-        measuring_ = !measuring_;
     };
     controlBtnOption.transform = [this](EntryState state) {
         state.label = measuring_ ? "Stop" : "Start";
@@ -144,6 +175,7 @@ Component ConsoleFrontend::Desk() {
 Component ConsoleFrontend::Connections() {
     auto terminalButton = Button("Terminal", [this]{ connectionSelected_ = 1; });
     return Renderer(terminalButton, [terminalButton, this]{
+        std::unique_lock lock(mu_);
         Elements ports;
         for (const auto& [port, status] : portsStatus_) {
             if (status == ConnectionType::DISCONNECTED) {
@@ -151,7 +183,7 @@ Component ConsoleFrontend::Connections() {
             }
             ports.push_back(hbox({
                 text(port) | bold | flex,
-                text("Available"),
+                text(connectionStatus(status)),
             }) | border);
         }
         return vbox({

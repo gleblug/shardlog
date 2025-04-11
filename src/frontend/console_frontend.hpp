@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <vector>
 #include <chrono>
+#include <atomic>
+#include <mutex>
 
 #include <ftxui/component/screen_interactive.hpp>
 
@@ -19,10 +21,13 @@ class ConsoleFrontend {
 public:
     ConsoleFrontend(CommandBus commandBus);
     void run();
+    void setStateMeasuring(bool state);
     void handleConnection(const ConnectionEvent& event);
     void handleData(const DataEvent& event);
     
 private:
+    std::mutex mu_;
+
     CommandBus commandBus_;
     ScreenInteractive screen_;
 
@@ -34,7 +39,7 @@ private:
     Component Measurements();
     Component Desk();
     int measurementsSelected_ = 0;
-    bool measuring_ = false;
+    std::atomic_bool measuring_ = false;
     std::map<std::string, DeviceData> devicesData_;
     chrono::seconds remainS_ = 0s;
     float percentage_ = 0.0;
