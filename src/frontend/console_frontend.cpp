@@ -33,7 +33,10 @@ void ConsoleFrontend::run() {
     int tabSelected = 0;
     auto tabMenu = cc::NamedMenu("Menu", tabValues, tabSelected, {{tabValues.size() - 1, [&]{ quitModalShown = true; }}});
     auto tabContainer = Container::Tab({
-        Measurements(),
+        Container::Tab({
+            Measurements(),
+            Desk()
+        }, &measurementsSelected_),
         Container::Tab({
             Connections(),
             Terminal()
@@ -69,6 +72,11 @@ void ConsoleFrontend::handleData(const DataEvent& event) {
 }
 
 void ConsoleFrontend::activateMeasurement(const std::string& experimentName, const std::string& measurementName) {
+    auto& config = ConfigManager::getInstance();
+    auto devicesInfo = config.getDevices(experimentName, measurementName);
+    for (const auto& info : devicesInfo) {
+        devicesData_.insert_or_assign(info.name, DeviceData{info.port, {}});
+    }
     commandBus_->publish(CommandEvent{
         CommandType::ACTIVATE_MEASUREMENT,
         {{"experiment_name", experimentName}, {"measurement_name", measurementName}}
@@ -78,80 +86,48 @@ void ConsoleFrontend::activateMeasurement(const std::string& experimentName, con
 
 Component ConsoleFrontend::Measurements() {
     auto& config = ConfigManager::getInstance();
-    auto mainComponent = Container::Tab({}, &measurementsSelected_);
-    return Renderer(mainComponent, [this, &config, mainComponent] {
-        Components experiments;
-        for (const auto &experimentName : config.getExperimentNames()) {
-            Components measurements;
-            for (const auto &measurementName : config.getMeasurementNames(experimentName)) {
-                measurements.push_back(Button(measurementName, [this, experimentName, measurementName]{
-                    activateMeasurement(experimentName, measurementName);
-                }));
-            }
-            experiments.push_back(Collapsible(experimentName, cc::CollapsibleInner(measurements)));
+    Components experiments;
+    for (const auto &experimentName : config.getExperimentNames()) {
+        Components measurements;
+        for (const auto &measurementName : config.getMeasurementNames(experimentName)) {
+            measurements.push_back(Button(measurementName, [this, experimentName, measurementName]{
+                activateMeasurement(experimentName, measurementName);
+            }));
         }
+        experiments.push_back(Collapsible(experimentName, cc::CollapsibleInner(measurements)));
+    }
 
-        auto desk = Container::Vertical({
-            DevicesComponent(),
-            Container::Horizontal({
-                Button((measuring_ ? "Stop" : "Start"), [this]{
-                    commandBus_->publish(CommandEvent{
-                        measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT, {}
-                    });
-                    measuring_ = !measuring_;
-                }) | size(WIDTH, EQUAL, 10),
-                Renderer([] {
-                    return text("PLACEHOLDER FOR GAUGE");
-                }) | flex
-            })
-        });
-
-        mainComponent->Add(Container::Vertical(experiments));
-        mainComponent->Add(desk);
-        return mainComponent->Render();
-    });
+    return Container::Vertical(experiments);
 }
 
-Component ConsoleFrontend::DevicesComponent() {
-    return Renderer([this] {
-        Elements elements;
-        for (const auto& [name, data] : devicesData_) {
-            Elements resElements;
-            for (const auto& [title, value] : data.values) {
-                resElements.push_back(text(title + ": " + value));
-            }
+Component ConsoleFrontend::Desk() {
+    // devices
+    auto devices = cc::ScrollableWrapper(cc::DevicesComponent(devicesData_, portsStatus_));
 
-            std::string status;
-            switch (portsStatus_.at(data.port)) {
-            case ConnectionType::CONNECTED:
-                status = "Connected";
-                break;
-            case ConnectionType::TIMEOUT:
-                status = "Timeout";
-                break;
-            case ConnectionType::DISCONNECTED:
-                status = "Disconnected";
-                break;
-            default:
-                status = "Unknown";
-                break;
-            }
+    // controls
+    ButtonOption controlBtnOption;
+    controlBtnOption.on_click = [this]{
+        measuring_ = !measuring_;
+        commandBus_->publish(CommandEvent{
+            measuring_ ? CommandType::STOP_MEASUREMENT : CommandType::START_MEASUREMENT, {}
+        });
+    };
+    controlBtnOption.transform = [this](EntryState state) {
+        state.label = measuring_ ? "Stop" : "Start";
+        return text(state.label) | border;
+    };
+    auto controlBtn = Button(controlBtnOption);
 
-            auto devElement = hbox({
-                text(name) | flex,
-                text(status) | bold
-            });
+    auto controls = Container::Horizontal({
+        controlBtn | size(WIDTH, EQUAL, 10),
+        Renderer([] {
+            return text("PLACEHOLDER FOR GAUGE");
+        }) | flex
+    });
 
-            if (!resElements.empty()) {
-                devElement = vbox({
-                    devElement,
-                    separator(),
-                    vbox(resElements)
-                });
-            }
-            elements.push_back(devElement | border);
-        }
-        return vbox(elements);
+    return Container::Vertical({
+        devices,
+        controls
     });
 }
 
@@ -210,7 +186,13 @@ Component ConsoleFrontend::Terminal() {
     });
 
     // output
-    auto consoleOutput = cc::ScrollableTextArea(outputArray);
+    auto consoleOutput = cc::ScrollableWrapper(Renderer([outputArray]{
+        Elements lines;
+        for (const auto& line : *outputArray) {
+            lines.push_back(text(line));
+        }
+        return vbox(lines);
+    }));
 
     // input
     auto inputStyle = InputOption::Default();

@@ -5,7 +5,9 @@
 #include <ftxui/component/mouse.hpp>              // for ftxui
 #include <functional>                             // for function
 #include <memory>                                 // for allocator, shared_ptr
- 
+#include <map>
+#include <unordered_map>
+
 #include "ftxui/component/screen_interactive.hpp"  // for ScreenInteractive, Component
 #include "ftxui/dom/elements.hpp"  // for operator|, separator, text, size, Element, vbox, border, GREATER_THAN, WIDTH, center, HEIGHT
 
@@ -18,7 +20,7 @@ using namespace ftxui;
 namespace cc {
 
 namespace style {
-    ButtonOption buttonOptionMenu() {
+    inline ButtonOption buttonOptionMenu() {
         ButtonOption buttonOption;
         buttonOption.transform = [](EntryState state) {
             state.label = (state.focused ? "> " : "  ") + state.label;
@@ -31,7 +33,7 @@ namespace style {
     }
 }
 
-Component ModalConfirmation(std::function<void()> yesClosure,
+inline Component ModalConfirmation(std::function<void()> yesClosure,
                          std::function<void()> noClosure) {
   auto component = Container::Horizontal({
       Button("Yes", yesClosure) | flex,
@@ -49,7 +51,7 @@ Component ModalConfirmation(std::function<void()> yesClosure,
   return component;
 }
 
-Component NamedMenu(const std::string& name, const std::vector<std::string>& items, int& selected, const std::unordered_map<int, std::function<void()>> &customActions = {}) {
+inline Component NamedMenu(const std::string& name, const std::vector<std::string>& items, int& selected, const std::unordered_map<int, std::function<void()>> &customActions = {}) {
     Components buttons;
     for (size_t i = 0; i < items.size(); i++) {
         std::function<void()> action = [&selected, i]{ selected = i; };
@@ -72,7 +74,7 @@ Component NamedMenu(const std::string& name, const std::vector<std::string>& ite
     });
 }
 
-Component CollapsibleInner(std::vector<Component> children) {
+inline Component CollapsibleInner(std::vector<Component> children) {
     Component vlist = Container::Vertical(std::move(children));
     return Renderer(vlist, [vlist] {
         return hbox({
@@ -82,24 +84,16 @@ Component CollapsibleInner(std::vector<Component> children) {
     });
 }
 
-Component ScrollableTextArea(std::shared_ptr<std::vector<std::string>> textArray) {
+inline Component ScrollableWrapper(Component content) {
     class Impl : public ComponentBase {
     private:
         float scroll_y = 1;
-        std::shared_ptr<std::vector<std::string>> array;
+        Component content;
     public:
-        Impl(std::shared_ptr<std::vector<std::string>> textArray)
-        : array(textArray)
+        Impl(Component inner)
+        : content(inner)
         {
-            auto content = Renderer([&] {
-                Elements textElements;
-                std::transform(array->cbegin(), array->cend(), std::back_inserter(textElements), [](const std::string& s) {
-                    return text(s);
-                });
-                return vbox(textElements);
-            });
- 
-            auto scrollable_content = Renderer(content, [&, content] {
+            auto scrollable_content = Renderer(content, [this] {
             return content->Render() | focusPositionRelative(0, scroll_y) |
                 frame | flex;
             });
@@ -118,6 +112,49 @@ Component ScrollableTextArea(std::shared_ptr<std::vector<std::string>> textArray
             }) | flex );
         }
     };
-    return Make<Impl>(textArray);
+    return Make<Impl>(content);
+}
+
+inline Component DevicesComponent(const std::map<std::string, DeviceData>& devicesData, const std::unordered_map<std::string, ConnectionType>& portsStatus) {
+    return Renderer([&] {
+        Elements elements;
+        for (const auto& [name, data] : devicesData) {
+            Elements resElements;
+            for (const auto& [title, value] : data.values) {
+                resElements.push_back(text(title + ": " + value));
+            }
+
+            std::string status;
+            switch (portsStatus.at(data.port)) {
+            case ConnectionType::CONNECTED:
+                status = "Connected";
+                break;
+            case ConnectionType::TIMEOUT:
+                status = "Timeout";
+                break;
+            case ConnectionType::DISCONNECTED:
+                status = "Disconnected";
+                break;
+            default:
+                status = "Unknown";
+                break;
+            }
+
+            auto devElement = hbox({
+                text(name) | flex,
+                text(status) | bold
+            });
+
+            if (!resElements.empty()) {
+                devElement = vbox({
+                    devElement,
+                    separator(),
+                    vbox(resElements)
+                });
+            }
+            elements.push_back(devElement | border);
+        }
+        return vbox(elements);
+    });
 }
 };

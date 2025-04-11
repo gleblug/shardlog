@@ -34,15 +34,9 @@ Device::Device(const DeviceInfo& info, ConnectionBus connectionBus)
         name_, port_, boudRate_, readTimeout_.count(), readWriteDelay_.count(), writeSource_, readCommands_[0].first, readCommands_[0].second[0]
     );
     
-    DeviceData result;
-    try {
-        connection_.open(port_, boudRate_);
-    } catch (const boost::system::system_error& e) {
-        lg::error("Failed to open port '{}': '{}'. Trying to reconnect...", port_, e.what());
-        reconnect();
-    }
+    connectionBus_->publish({port_, ConnectionType::DISCONNECTED});
+    reconnect();
 
-    publishResult(result);
     measurementThread_ = std::thread(&Device::measurementThread, this);
 }
 
@@ -112,8 +106,10 @@ void Device::measurementThread() {
                 }
                 value = connection_.readStringUntil();
                 boost::erase_all(value, "\r");
+                connectionBus_->publish({port_, ConnectionType::CONNECTED});
             }
             catch (const timeout_exception&) {
+                connectionBus_->publish({port_, ConnectionType::TIMEOUT});
                 break;
             }
             catch (const boost::system::system_error&) {
@@ -140,9 +136,11 @@ void Device::reconnect() {
                 connection_.open(port_, boudRate_);
             }
             catch (const boost::system::system_error&) {
+                connectionBus_->publish({port_, ConnectionType::DISCONNECTED});
                 lg::error("Failed to reconnect port '{}'", port_);
             }
             if (connection_.isOpen()) {
+                connectionBus_->publish({port_, ConnectionType::CONNECTED});
                 lg::info("Port '{}' reconnected", port_);
                 reconnectRequested_ = false;
                 break;

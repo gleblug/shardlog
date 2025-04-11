@@ -29,7 +29,7 @@ private:
     void activateMeasurement(const std::string& experimentName, const std::string& measurementName);
 
     Component Measurements();
-    Component DevicesComponent();
+    Component Desk();
     int measurementsSelected_ = 0;
     bool measuring_ = false;
     std::map<std::string, DeviceData> devicesData_;
